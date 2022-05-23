@@ -1,0 +1,10 @@
+[submodule "jekyll/_plugins/just-the-docs"]
+	path = jekyll/_plugins/just-the-docs
+	url = https://github.com/just-the-docs/just-the-docs
+[submodule "jekyll/_plugins/org-ruby"]
+	path = jekyll/_plugins/org-ruby
+	url = https://github.com/ricardoricho/org-ruby
+	branch = support-rouge
+[submodule "jekyll/_plugins/jekyll-org"]
+	path = jekyll/_plugins/jekyll-org
+	url = https://github.com/eggcaker/jekyll-org

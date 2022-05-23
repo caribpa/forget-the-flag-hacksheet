@@ -1,0 +1,501 @@
+From 547c6bcb23df3540556467b724995c2d2b1f666f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Carlos=20Ib=C3=A1=C3=B1ez?= <caribpa@outlook.com>
+Date: Tue, 24 May 2022 00:23:03 +0200
+Subject: [PATCH] ftf custom
+
+---
+ _includes/head.html           |  2 +-
+ _includes/title.html          |  2 +-
+ _layouts/default.html         | 44 +++++------------
+ _sass/code.scss               | 13 ++++-
+ _sass/content.scss            |  8 ++-
+ _sass/layout.scss             | 92 +++++++++++++++++++++++++++++++++--
+ _sass/navigation.scss         |  7 ++-
+ _sass/search.scss             |  5 ++
+ _sass/support/_variables.scss | 12 ++---
+ assets/js/just-the-docs.js    | 50 ++++++++++---------
+ 10 files changed, 164 insertions(+), 71 deletions(-)
+
+diff --git a/_includes/head.html b/_includes/head.html
+index c0f73d7..0865d4f 100644
+--- a/_includes/head.html
++++ b/_includes/head.html
+@@ -3,7 +3,7 @@
+   <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+ 
+   {% unless site.plugins contains "jekyll-seo-tag" %}
+-    <title>{{ page.title }} - {{ site.title }}</title>
++    <title>{{ site.title }}</title>
+ 
+     {% if page.description %}
+       <meta name="Description" content="{{ page.description }}">
+diff --git a/_includes/title.html b/_includes/title.html
+index 8bd3fa8..59adf84 100644
+--- a/_includes/title.html
++++ b/_includes/title.html
+@@ -1,5 +1,5 @@
+ {% if site.logo %}
+-  <div class="site-logo"></div>
++  <div class="site-logo"><div></div>
+ {% else %}
+   {{ site.title }}
+ {% endif %}
+diff --git a/_layouts/default.html b/_layouts/default.html
+index 40d85ac..542c4c4 100644
+--- a/_layouts/default.html
++++ b/_layouts/default.html
+@@ -42,43 +42,33 @@ layout: table_wrappers
+ 
+   <div class="side-bar">
+     <div class="site-header">
+-      <a href="{{ '/' | absolute_url }}" class="site-title lh-tight">{% include title.html %}</a>
++      <a title="Forget the Flag" href="{% include git-site.txt %}" class="site-title lh-tight">{% include title.html %}</a>
+       <a href="#" id="menu-button" class="site-button">
+         <svg viewBox="0 0 24 24" class="icon"><use xlink:href="#svg-menu"></use></svg>
+       </a>
+     </div>
+     <nav role="navigation" aria-label="Main" id="site-nav" class="site-nav">
+-      {% if site.just_the_docs.collections %}
+-        {% assign collections_size = site.just_the_docs.collections | size %}
+-        {% for collection_entry in site.just_the_docs.collections %}
+-          {% assign collection_key = collection_entry[0] %}
+-          {% assign collection_value = collection_entry[1] %}
+-          {% assign collection = site[collection_key] %}
+-          {% if collection_value.nav_exclude != true %}
+-            {% if collections_size > 1 %}
+-              <div class="nav-category">{{ collection_value.name }}</div>
+-            {% endif %}
+-            {% include nav.html pages=collection %}
+-          {% endif %}
+-        {% endfor %}
+-      {% else %}
+-        {% include nav.html pages=site.html_pages %}
+-      {% endif %}
++      <div class="nav-category">
++        {% include toc.html html=content class="nav-list" item_class="nav-list-item" anchor_class="nav-list-link" submenu_class="nav-list" %}
++      </div>
+     </nav>
+-    <footer class="site-footer">
+-      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+-    </footer>
+   </div>
+   <div class="main" id="top">
+     <div id="main-header" class="main-header">
+       {% if site.search_enabled != false %}
+         <div class="search">
+           <div class="search-input-wrap">
+-            <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search {{ site.title }}" aria-label="Search {{ site.title }}" autocomplete="off">
++            <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search for forgotten flags" aria-label="Search for forgotten flags" autocomplete="off">
+             <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#svg-search"></use></svg></label>
+           </div>
+           <div id="search-results" class="search-results"></div>
+         </div>
++        {% if site.search.button %}
++        <a href="#" id="search-button" class="search-button">
++          <svg viewBox="0 0 24 24" class="icon"><use xlink:href="#svg-search"></use></svg>
++        </a>
++        {% endif %}
++        <div class="search-overlay"></div>
+       {% endif %}
+       {% include header_custom.html %}
+       {% if site.aux_links %}
+@@ -99,7 +89,7 @@ layout: table_wrappers
+         </nav>
+       {% endif %}
+     </div>
+-    <div id="main-content-wrap" class="main-content-wrap">
++    <div tabindex="0" id="main-content-wrap" class="main-content-wrap">
+       {% unless page.url == "/" %}
+         {% if page.parent %}
+           {%- for node in pages_list -%}
+@@ -187,16 +177,6 @@ layout: table_wrappers
+ 
+       </div>
+     </div>
+-
+-    {% if site.search_enabled != false %}
+-      {% if site.search.button %}
+-        <a href="#" id="search-button" class="search-button">
+-          <svg viewBox="0 0 24 24" class="icon"><use xlink:href="#svg-search"></use></svg>
+-        </a>
+-      {% endif %}
+-
+-      <div class="search-overlay"></div>
+-    {% endif %}
+   </div>
+ </body>
+ </html>
+diff --git a/_sass/code.scss b/_sass/code.scss
+index f038912..78f4613 100644
+--- a/_sass/code.scss
++++ b/_sass/code.scss
+@@ -46,7 +46,7 @@ a:visited code {
+ // ```[LANG]...```
+ div.highlighter-rouge {
+   padding: $sp-3;
+-  margin-top: 0;
++  margin-top: 0.5em;
+   margin-bottom: $sp-3;
+   overflow-x: auto;
+   background-color: $code-background-color;
+@@ -55,12 +55,21 @@ div.highlighter-rouge {
+   -webkit-overflow-scrolling: touch;
+ 
+   div.highlight,
+-  pre.highlight,
+   code {
+     padding: 0;
+     margin: 0;
+     border: 0;
+   }
++
++  pre.highlight {
++    padding: 0 0.25em 0 0.25rem;
++    margin: 0;
++    border: 0;
++  }
++}
++
++.highlight pre {
++  white-space: pre-wrap !important;
+ }
+ 
+ // {% highlight LANG %}...{% endhighlight %},
+diff --git a/_sass/content.scss b/_sass/content.scss
+index a53271a..3d1177e 100644
+--- a/_sass/content.scss
++++ b/_sass/content.scss
+@@ -6,6 +6,7 @@
+ // stylelint-disable selector-no-type, max-nesting-depth, selector-max-compound-selectors, selector-max-type
+ 
+ .main-content {
++  padding-right: 2rem;
+   line-height: $content-line-height;
+ 
+   ol,
+@@ -77,7 +78,7 @@
+         position: absolute;
+         margin-left: -1.4em;
+         color: $grey-dk-000;
+-        content: "•";
++        content: "";
+       }
+     }
+   }
+@@ -213,6 +214,8 @@
+     margin-top: 1.5em;
+     margin-bottom: 0.25em;
+ 
++    font-weight: bold;
++
+     &:first-child {
+       margin-top: $sp-2;
+     }
+@@ -228,4 +231,7 @@
+       margin-top: 0;
+     }
+   }
++  h5 {
++    font-size: 16px !important;
++  }
+ }
+diff --git a/_sass/layout.scss b/_sass/layout.scss
+index 004cbe7..6c40fd5 100644
+--- a/_sass/layout.scss
++++ b/_sass/layout.scss
+@@ -26,12 +26,18 @@
+ 
+ .main {
+   @include mq(md) {
+-    position: relative;
+-    max-width: $content-width;
++    position: fixed;
+     margin-left: $nav-width-md;
++    display: flex;
++
++    flex-wrap: nowrap;
++    flex-direction: column;
++
++    height: 100%;
+   }
+ 
+   @include mq(lg) {
++    width: calc((100% - #{$nav-width + $content-width}) / 2 + #{$content-width});
+     margin-left: calc(
+       (100% - #{$nav-width + $content-width}) / 2 + #{$nav-width}
+     );
+@@ -43,6 +49,13 @@
+   padding-top: $gutter-spacing-sm;
+   padding-bottom: $gutter-spacing-sm;
+ 
++  overflow-x: hidden;
++
++  display: block;
++  flex: 1 1 auto;
++  overflow-y: auto;
++  scroll-behavior: smooth;
++
+   @include mq(md) {
+     padding-top: $gutter-spacing;
+     padding-bottom: $gutter-spacing;
+@@ -54,10 +67,13 @@
+   display: none;
+   background-color: $sidebar-color;
+ 
++  width: 100%;
++
+   @include mq(md) {
+     display: flex;
+     justify-content: space-between;
+     height: $header-height;
++    min-height: $header-height;
+     background-color: $body-background-color;
+     border-bottom: $border $border-color;
+   }
+@@ -90,8 +106,8 @@
+ 
+   @include mq(md) {
+     display: block;
+-    padding-top: $sp-8;
+-    padding-bottom: $gutter-spacing-sm;
++    padding-top: 1.25rem;
++    padding-bottom: 1.25rem;
+     overflow-y: auto;
+     flex: 1 1 auto;
+   }
+@@ -128,6 +144,7 @@
+ 
+ @if variable-exists(logo) {
+   .site-logo {
++    margin-left: 5rem;
+     width: 100%;
+     height: 100%;
+     background-image: url($logo);
+@@ -203,3 +220,70 @@ body {
+   height: $sp-5;
+   color: $link-color;
+ }
++
++.main-content {
++  h1 {
++    color: #4f97d7;
++  }
++  h2 {
++    color: #2d9574;
++  }
++  h3 {
++    color: #67b11d;
++  }
++  h4 {
++    color: #b1951d;
++  }
++  h5 {
++    color: #7d2d4b;
++  }
++  h6 {
++    color: #f7b51d;
++  }
++}
++
++.nav-list {
++  > .nav-list-item {
++    > a {
++      color: #4f97d7 !important;
++    }
++    a:first-child {
++      font-weight: bolder;
++    }
++    > .nav-list {
++      > .nav-list-item {
++        > a {
++          color: #2d9574 !important;
++        }
++        > .nav-list {
++          > .nav-list-item {
++            > a {
++              color: #67b11d !important;
++            }
++            > .nav-list {
++              > .nav-list-item {
++                > a {
++                  color: #b1951d !important;
++                }
++                > .nav-list {
++                  > .nav-list-item {
++                    > a {
++                      color: #7d2d4b !important;
++                    }
++                    > .nav-list {
++                      > .nav-list-item {
++                        > a {
++                          color: #f7b51d !important;
++                        }
++                      }
++                    }
++                  }
++                }
++              }
++            }
++          }
++        }
++      }
++    }
++  }
++}
+diff --git a/_sass/navigation.scss b/_sass/navigation.scss
+index 521c15f..d5c1bac 100644
+--- a/_sass/navigation.scss
++++ b/_sass/navigation.scss
+@@ -110,7 +110,11 @@
+         }
+ 
+         .nav-list-expander {
+-          color: $nav-child-link-color;
++          color: $link-color;
++        }
++
++        & :nth-child(2) {
++          color: $link-color;
+         }
+       }
+     }
+@@ -139,7 +143,6 @@
+   font-weight: 600;
+   text-align: end;
+   text-transform: uppercase;
+-  border-bottom: $border $border-color;
+   @include fs-2;
+ 
+   @include mq(md) {
+diff --git a/_sass/search.scss b/_sass/search.scss
+index 4290210..c098b40 100644
+--- a/_sass/search.scss
++++ b/_sass/search.scss
+@@ -154,6 +154,7 @@
+ }
+ 
+ .search-result-doc {
++  position: absolute;
+   display: flex;
+   align-items: center;
+   word-wrap: break-word;
+@@ -320,4 +321,8 @@
+       padding-top: 0;
+     }
+   }
++
++  .main-content-wrap {
++    z-index: -1;
++  }
+ }
+diff --git a/_sass/support/_variables.scss b/_sass/support/_variables.scss
+index 3ab3f05..d16fc15 100644
+--- a/_sass/support/_variables.scss
++++ b/_sass/support/_variables.scss
+@@ -15,13 +15,13 @@ $body-heading-line-height: 1.25 !default;
+ // `-sm` suffix is the size at the small (and above) media query
+ //
+ 
+-$font-size-1: 9px !default;
+-$font-size-1-sm: 10px !default;
+-$font-size-2: 11px !default; //h4 - uppercased!, h6 not uppercased, text-small
+-$font-size-3: 12px !default; //h5
++$font-size-1: 11px !default;
++$font-size-1-sm: 12px !default;
++$font-size-2: 13px !default; //h4 - uppercased!, h6 not uppercased, text-small
++$font-size-3: 16px !default; //h5
+ $font-size-4: 14px !default;
+-$font-size-5: 16px !default; //h3
+-$font-size-6: 18px !default; //h2
++$font-size-5: 18px !default; //h3
++$font-size-6: 20px !default; //h2
+ $font-size-7: 24px !default;
+ $font-size-8: 32px !default; //h1
+ $font-size-9: 36px !default;
+diff --git a/assets/js/just-the-docs.js b/assets/js/just-the-docs.js
+index c287ec0..d35fdcb 100644
+--- a/assets/js/just-the-docs.js
++++ b/assets/js/just-the-docs.js
+@@ -74,7 +74,7 @@ function initSearch() {
+   request.onload = function(){
+     if (request.status >= 200 && request.status < 400) {
+       var docs = JSON.parse(request.responseText);
+-      
++
+       lunr.tokenizer.separator = {{ site.search.tokenizer_separator | default: site.search_tokenizer_separator | default: "/[\s\-/]+/" }}
+ 
+       var index = lunr(function(){
+@@ -219,23 +219,15 @@ function searchLoaded(index, docs) {
+ 
+       var resultDoc = document.createElement('div');
+       resultDoc.classList.add('search-result-doc');
+-      resultDoc.innerHTML = '<svg viewBox="0 0 24 24" class="search-result-icon"><use xlink:href="#svg-doc"></use></svg>';
++      resultDoc.innerHTML = '<div" class="search-result-icon">🚩</div>';
+       resultTitle.appendChild(resultDoc);
+ 
+-      var resultDocTitle = document.createElement('div');
+-      resultDocTitle.classList.add('search-result-doc-title');
+-      resultDocTitle.innerHTML = doc.doc;
+-      resultDoc.appendChild(resultDocTitle);
+-      var resultDocOrSection = resultDocTitle;
+-
+-      if (doc.doc != doc.title) {
+-        resultDoc.classList.add('search-result-doc-parent');
+-        var resultSection = document.createElement('div');
+-        resultSection.classList.add('search-result-section');
+-        resultSection.innerHTML = doc.title;
+-        resultTitle.appendChild(resultSection);
+-        resultDocOrSection = resultSection;
+-      }
++      resultDoc.classList.add('search-result-doc-parent');
++      var resultSection = document.createElement('div');
++      resultSection.classList.add('search-result-section');
++      resultSection.innerHTML = doc.title;
++      resultTitle.appendChild(resultSection);
++      resultDocOrSection = resultSection;
+ 
+       var metadata = result.matchData.metadata;
+       var titlePositions = [];
+@@ -348,12 +340,12 @@ function searchLoaded(index, docs) {
+         }
+       }
+ 
+-      {%- if site.search.rel_url != false %}
+-      var resultRelUrl = document.createElement('span');
+-      resultRelUrl.classList.add('search-result-rel-url');
+-      resultRelUrl.innerText = doc.relUrl;
+-      resultTitle.appendChild(resultRelUrl);
+-      {%- endif %}
++      // {%- if site.search.rel_url != false %}
++      // var resultRelUrl = document.createElement('span');
++      // resultRelUrl.classList.add('search-result-rel-url');
++      // resultRelUrl.innerText = doc.relUrl;
++      // resultTitle.appendChild(resultRelUrl);
++      // {%- endif %}
+     }
+ 
+     function addHighlightedText(parent, text, start, end, positions) {
+@@ -464,6 +456,20 @@ jtd.onReady(function(){
+   {%- if site.search_enabled != false %}
+   initSearch();
+   {%- endif %}
++
++  var focusOnMain = function() {
++    document.querySelector("#main-content-wrap").focus();
++    document.querySelector("#main-content-wrap").blur();
++  }
++
++  jtd.addEvent(window, 'hashchange', function(e) {
++    focusOnMain();
++  });
++
++  if (window.location.hash.slice(1))
++    focusOnMain();
++  else
++    document.querySelector("#search-input").focus();
+ });
+ 
+ })(window.jtd = window.jtd || {});
+-- 
+2.36.1
+

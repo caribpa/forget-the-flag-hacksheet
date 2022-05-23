@@ -1,0 +1,77 @@
+From ba4af786ff99f1e7eacee3d13f12040781ad26e3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Carlos=20Ib=C3=A1=C3=B1ez?= <caribpa@outlook.com>
+Date: Tue, 24 May 2022 00:39:36 +0200
+Subject: [PATCH] ftf custom
+
+---
+ lib/jekyll-org/converter.rb              |  1 +
+ spec/.#test_jekyll-org-mode-converter.rb |  1 -
+ spec/helper.rb                           | 21 ---------------------
+ spec/test_jekyll-org.rb                  |  6 ------
+ 4 files changed, 1 insertion(+), 28 deletions(-)
+ delete mode 120000 spec/.#test_jekyll-org-mode-converter.rb
+ delete mode 100644 spec/helper.rb
+ delete mode 100644 spec/test_jekyll-org.rb
+
+diff --git a/lib/jekyll-org/converter.rb b/lib/jekyll-org/converter.rb
+index 231dd44..48677bd 100644
+--- a/lib/jekyll-org/converter.rb
++++ b/lib/jekyll-org/converter.rb
+@@ -82,6 +82,7 @@ module Jekyll
+       # see https://github.com/bdewey/org-ruby/blob/master/lib/org-ruby/parser.rb
+       def parser_options
+         org_config.fetch("parser_options", { markup_file: 'html.tags.yml' })
++          .transform_keys(&:to_sym)
+       end
+ 
+       def assign_setting(key, value, settings)
+diff --git a/spec/.#test_jekyll-org-mode-converter.rb b/spec/.#test_jekyll-org-mode-converter.rb
+deleted file mode 120000
+index 9418af1..0000000
+--- a/spec/.#test_jekyll-org-mode-converter.rb
++++ /dev/null
+@@ -1 +0,0 @@
+-eggcaker@Eggs-MacBook-Pro.local.472
+\ No newline at end of file
+diff --git a/spec/helper.rb b/spec/helper.rb
+deleted file mode 100644
+index 0249a07..0000000
+--- a/spec/helper.rb
++++ /dev/null
+@@ -1,21 +0,0 @@
+-require 'jekyll'
+-require File.expand_path('../lib/jekyll-org', File.dirname(__FILE__))
+-
+-Jekyll.logger.log_level = :error
+-
+-RSpec.configure do |config|
+-  config.run_all_when_everything_filtered = true
+-  config.filter_run :focus
+-  config.order = 'random'
+-
+-  SOURCE_DIR = File.expand_path("../fixtures", __FILE__)
+-  DEST_DIR   = File.expand_path("../dest",     __FILE__)
+-
+-  def source_dir(*files)
+-    File.join(SOURCE_DIR, *files)
+-  end
+-
+-  def dest_dir(*files)
+-    File.join(DEST_DIR, *files)
+-  end
+-end
+diff --git a/spec/test_jekyll-org.rb b/spec/test_jekyll-org.rb
+deleted file mode 100644
+index 664df7b..0000000
+--- a/spec/test_jekyll-org.rb
++++ /dev/null
+@@ -1,6 +0,0 @@
+-require 'helper'
+-
+-describe("should working with unit test") do
+-  it "added some test cases" do
+-  end
+-end
+-- 
+2.36.1
+
