@@ -853,11 +853,15 @@
        - Omitting ~<host>~ means ~localhost~
      - For Windows, the drive is necessary:
        - ~file://<host>/c:/<path>/file.txt~
+     - But the host is optional:
+       - ~file:///c:/<path>/file.txt~
      - Four slash host is an alt for Win UNC:
        - ~file:////<server>/<dir>/file.txt~
        - Like ~\\<server>\<dir>\file.txt~
      - Spaces supported as is, no hex need:
        - ~file:///<full/path>/test file.txt~
+     - One slash means that there's no host:
+       - ~file:/<full/path>/file.txt~
 **** Data
      - Plaintext or Base64, other encodings may be supported:
        - ~data://text/plain,<plaintext>~
