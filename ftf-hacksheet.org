@@ -2899,6 +2899,22 @@
         echo; for ((i=1;;i++)); do for c in {65..96} {32..64} {123..126}; do c="$(([##16]c))"; while :; do sleep 1; timeout 6 ./curl.sh "$i" "%$c" && break; [ $? -eq 124 ] && { echo -ne "\x$c"; continue 3 }; done; done; break; done; echo
         # curl.sh can be: "$0 $i %$c curl"
       #+end_src
+*** Tools
+**** SQLmap
+    - [[https://github.com/sqlmapproject/sqlmap][Site]] - Automated SQLi and dumper tool
+      #+begin_src sh
+        # TODO - General flag description
+        sqlmap -u '<url>' -p '<params>'
+        # -p <p1>,<p2..>  - Params to test
+        # --dbms=<DB>     - Only test for a DB
+        # --dump          - Dump all tables
+        # --flush-session - Forget saved session
+
+        # Examples:
+
+        # POST request with multiple parameters
+        sqlmap -u '<url>' --method POST --data "db=mysql&name=user&sort=id&order=asc" -p "name,sort,order"
+      #+end_src
 ** General
 *** Find all databases
 **** T-SQL
