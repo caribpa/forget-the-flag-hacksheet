@@ -409,6 +409,14 @@
          gospider -s <url> --cookie 'a=b; c=d' -d 0 --sitemap --json | jq -r '.output' | awk '!x[$0]++'
          # --whitelist-domain=<regex> - Dom only
        #+end_src
+**** hakrawler
+     - [[https://github.com/hakluke/hakrawler][Site]] - Wayback Machine crawler:
+       #+begin_src sh
+         hakrawler -u <<< "<url>"
+         # -u     - Show unique URLs only
+         # -d <n> - Depth to crawl, defaults to 2
+         # -subs  - Also crawl subdomains
+       #+end_src
 **** Photon
      - [[https://github.com/s0md3v/Photon][Site]] - OSINT crawler ([[https://github.com/s0md3v/Photon/wiki/Usage#piping-writing-to-stdout][stdout values]]):
        #+begin_src sh
