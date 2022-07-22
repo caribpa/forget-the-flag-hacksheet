@@ -1340,6 +1340,10 @@
        #+begin_src sh
          curl -I <url>
        #+end_src
+     - Response size only:
+       #+begin_src sh
+         curl -s -w '%{size_download}' <url>
+       #+end_src
      - Follow redirection:
        #+begin_src sh
          curl -L <url>
