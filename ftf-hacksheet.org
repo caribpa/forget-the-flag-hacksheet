@@ -7310,6 +7310,22 @@
       - Select the Hard Drive of the client in the VMplayer dashboard > VM Settings
       - Select Defrag disk (doesn't seem to work)
       - Select Compact disk
+** VirtualBox VM Maintenance
+*** Shrink
+    - Defrag the guest
+    - Write a /wipefile to zero all the data
+    - Power off the guest
+    - From the host:
+      #+begin_src sh
+        # List all the disks
+        VBoxManage list hdds
+
+        # Compact the disk
+        VBoxManage modifymedium disk "<UUID>" --compact
+
+        # Auto-compact all disks
+        VBoxManage list hdds 2>&1 | awk '/^UUID/{print $2}' | xargs -i VBoxManage modifymedium disk "{}" --compact
+      #+end_src
 ** Pip Cache
    - Purge ~pip~ cache and don't use it anymore
      #+begin_src sh
