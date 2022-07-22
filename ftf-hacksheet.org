@@ -2800,6 +2800,11 @@
           # -t <threads>
         #+end_src
 
+* Cloud
+** Common Addresses
+*** Link-Local
+   - Hosting providers: 169.254.169.254
+
 * Software
 ** Windows
 *** Print Spooler - CVE-2021-1675
