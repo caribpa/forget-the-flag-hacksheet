@@ -2208,6 +2208,10 @@
         - to ~user[]=<user>~
       - Try changing only one at a time
 **** Code Execution
+***** PHPInfo
+      - If PHPInfo is not exposed by the server but it is possible to inject PHP code, though not achieving RCE, consider calling the ~phpinfo()~ function to troubleshoot a bit
+      - Check for the value of the ~disable_functions~ directive to see which functions might be preventing RCE
+      - Check for the ~$_SERVER['DOCUMENT_ROOT']~ variable in case the way to achieve RCE is by writing a malicious file
 ***** System Commands
       #+begin_src php
         <?php $out=shell_exec("<cmd> 2>&1"); echo "<pre>$out</pre>"; ?>
