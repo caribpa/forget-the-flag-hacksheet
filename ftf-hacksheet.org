@@ -578,6 +578,28 @@
        - [[http://downloads.skullsecurity.org/passwords/rockyou.txt.bz2][rockyou.txt]] <- Only random sites
        - [[https://github.com/six2dez/OneListForAll][OneListForAll]] <- Desperate
        - [[https://gist.github.com/jhaddix/86a06c5dc309d08580a018c66354a056][all-wordlist.txt]]
+     - Use if LFI has been identified:
+       - [[https://github.com/danielmiessler/SecLists/blob/master/Fuzzing/LFI/LFI-Jhaddix.txt][LFI-Jhaddix.txt]] - Generic
+       - [[https://github.com/danielmiessler/SecLists/blob/master/Fuzzing/LFI/LFI-LFISuite-pathtotest-huge.txt][LFI-LFISuite-pathtotest-huge.txt]] - Big
+       - [[https://github.com/danielmiessler/SecLists/raw/master/Fuzzing/LFI/LFI-gracefulsecurity-linux.txt][LFI-gracefulsecurity-linux.txt]] - Linux
+       - [[https://github.com/danielmiessler/SecLists/raw/master/Fuzzing/LFI/LFI-gracefulsecurity-windows.txt][LFI-gracefulsecurity-windows.txt]] - Win
+     - LFI - Create fuzzing files for ffuf/wfuzz:
+       - ~paths.txt~
+         #+begin_src text
+           ../
+           ../../
+           ../../../
+           ../../../../
+           ../../../../../
+           ../../../../../../
+           ../../../../../../../
+         #+end_src
+       - ~files.txt~
+         #+begin_src text
+           file1.txt
+           file2.conf
+           etc/passwd
+         #+end_src
 **** Ffuf
      - [[https://github.com/ffuf/ffuf][Site]] - Most flexible fuzzer ([[https://codingo.io/tools/ffuf/bounty/2020/09/17/everything-you-need-to-know-about-ffuf.html][Ref]]):
        #+begin_src sh
