@@ -6913,6 +6913,32 @@
     - Using MSYS might be the easiest way to get an unified linux-like environment in Windows
     - In fact, it can be successfully used to build native tools that are usually caught by the AV
     - Get it from [[https://www.msys2.org/][msys2.org]]
+*** Proxy Setup / Bypass
+    - If the system is using a proxy, use it:
+      #+begin_src sh
+        # Check the Windows Proxy Settings
+        export http_proxy=http://<ip:port>
+        export https_proxy=https://<ip:port>
+        # PAC files require a local HTTP proxy
+        # and both exports should be http://...
+      #+end_src
+    - If the proxy is filtering the content, consider bypassing it with a reverse tunnel
+    - Now disable the SSL/TLS checks from pacman:
+      #+begin_src sh
+        nano /etc/pacman.conf
+        # Uncomment a XferCommand and add a flag
+        # to ignore SSL/TLS checks:
+        #   -k                     -> curl
+        #   --no-check-certificate -> wget
+
+        # And change the main SigLevel to Never
+      #+end_src
+    - Initialize and populate pacman's keyring:
+      #+begin_src sh
+        pacman-key --init
+
+        pacman-key --populate
+      #+end_src
 *** Python Cryptography / Rust Installation
     - Installing the ~cryptography~ library via ~pip~ is ridiculously difficult
     - There's the ~mingw-w64-x86_64-python-cryptography~ pkg, but it might be outdated
