@@ -5948,12 +5948,33 @@
       #+end_src
 *** Most useful commands
     #+begin_src sh
+      # Set analysis region
+      e analysis.in=io.maps  # All bin memory
+      e analysis.in=dbg.maps # All mapped memory
+      e analysis.in=range    # In addr range...
+      e analysis.from=<addr>
+      e analysis.to=<addr>
+
       # Analysis
       aa          # Almost-all analysis
-      aaa         # Deepest analysis
-      al          # Analyze func commands
-      afva        # Function variable/args...
+      aaa         # Deeper aa (non-experimental)
+      aac [len]   # Analyze func calls
+      aaf         # Analyze all functions
+      aan[gr]     # Autoname funcs: [g]o/no-[r]et
+      aad [len]   # Analyze data refs to code
+      aaF         # Apply signatures from sigdb
+      aao         # Analyze all objc references
+      aap         # Analyze func preludes
+      aas [len]   # Analyze symbols
+      aaS         # Analyze all sym. flags
+      aaT [len]   # Analyze code after trap-sleds
+      aar [len]   # Analyze xrefs in current sect
+      aav [sect]  # Find values in sect or map
+      af[r]       # Analyze funcs recursively
+      afa[l]      # Analyze func args in call
+      afva        # Local func variable/args...
       afu <addr>  # Analyze func until addr
+      pdga        # Switch to rz-ghidra analyzer
 
       # Files
       o [<file>]   # List fds/open new file
@@ -5973,7 +5994,7 @@
 
       # File information
       iI    # Magic, compiler, security...
-      ieee  # Entry and exitpoints
+      ieee  # Entry and exitpoints - r2 only
       is    # Symbols
       ii    # Imports
 
@@ -5993,7 +6014,7 @@
       # Grep rows and cols numbers
       izz ~:<row-ini>..<row-end>[<col>]
       izz ~<search-term>[<col-ini>-<col-end>]
-      izz ~:4[<col1>,<col5>]
+      izz ~<search-term>:<row>[<col1>,<col5>]
       izz ~+..<search> # i-case + less pager
 
       # Seek to..
@@ -6042,6 +6063,7 @@
       dcu <multi> # Continue until addr/range
       dcr         # Continue until return
       dcc         # Continue until call
+      e cmd.prompt=sr PC  # Show PC on cmd prompt
 
       # Breakpoints...
       db <addr>    # Create one in address
@@ -6071,6 +6093,47 @@
       dro            # Show previous values
       drr            # Show refs: telescoping
 
+      # ESIL setup - Rizin also has the aez* cmds
+      aei             # Initialize ESIL VM
+      aeim [<addr>..] # Initialize ESIL VM stack
+      aeip            # Init ESIL VM IP to $$
+      aepc <addr>     # Change ESIL VM PC: Use $$
+      ar <reg> [=<v>] # Show/modify ESIL register
+
+      # In Panel View show ESIL registers content
+      e -> ar         # Use Tab to change panels
+      e -> pxr @ SP
+
+      # ESIL display info
+      e emu.str=true  # Display smart ESIL info
+      e asm.emu=true  # Display verbose ESIL info
+
+      # ESIL memory variables
+      e emu.write=true # Allows modifying memory
+      e esil.fillstack=<pat>     # Fill stack
+      e esil.stack.pattern=<pat> # with a pattern
+      e esil.romem=true   # Make ESIL mem RO
+      e esil.nonull=true  # Stop when null ptr rw
+
+      # ESIL analyze
+      aae             # ESIL analyze references
+      aaef            # aae in all functions
+
+      # ESIL step
+      aes             # ESIL step in
+      aeso            # ESIL step over
+      aesu <addr>     # ESIL step until
+      aesuo <optype>  # ESIL step until opcode_t
+      aesb            # ESIL step back: trace req
+
+      # ESIL trace
+      aets            # ESIL list traces
+      aets+           # ESIL new trace
+
+      # ESIL function
+      aef [<addr>]    # ESIL emulate function
+      aefa [<addr>]   # ESIL obtain func args
+
       # Objects...
       pf S @obj.<name>   # Show stored string
       pf p @obj.<name>+8 # Show length 64bit
@@ -6080,6 +6143,14 @@
       pC         # Print in columns
       pdf        # Print function
       pdr        # Show recursive call graph
+      pdg        # Decompile with Ghidra
+      pdgd       # Disassemble with Sleigh
+
+      # Disassemble configuration options:
+      e ghidra.verbose=false # Reduce warnings
+      e asm.describe=true # Explain instruction
+      e asm.pseudo=true   # Show pseudo-assembly
+      e asm.decode=true   # Show code analysis
 
       # 10 bytes before + 10 after: Noted-hex
       pxc 20 @ $$ - 10
@@ -6093,13 +6164,14 @@
       # Locate usage of addresses (use aa)
       axt [<addr>]  # Refs to this address
       axf [<addr>]  # Refs from this address
-      ax. [<addr>]  # Refs from/to this addr
+      ax. [<addr>]  # Refs from/to this addr - r2
       axff [<addr>] # Refs from this funct
-      ax ~...       # All references HUD mode
+      axl ~...      # All references HUD mode
       axg [<addr>]  # Current func call-graph
       afl           # List analyzed functions
+      aflm ~..      # List recursive func calls
       afi           # Verbose afl
-      afM <func>    # Show function map
+      afM           # Show functions map
       afo           # Show function address
       afx           # Show functions refs
       afvx          # Show funcs vars refs
@@ -6143,7 +6215,8 @@
       e search.maxhits=1
 
       # Define memory location to search
-      e search.in=dbg.maps
+      e search.in=dbg.maps  # Mapped dbg memory
+      e search.in=raw       # All memory
 
       # Gadget search (hex) in address range
       /a jmp esp @( <addr-ini> <addr-end> )
@@ -6213,6 +6286,14 @@
       # Override memory with two Intel NOPs
       wx 9090 @<location>  # wxs - seek after
 
+      # Assemble override
+      wa "mov eax, ...;nop" # Write instructions
+      # Use rz-asm "mov eax, ...;nop"
+
+      # Extend write
+      wen <n> @<location>   # Add <n> null bytes
+      wex <hex> @<location> # Add <hex> bytes
+
       # Convert...
       ?x <str>   # String to hexpairs
       ?x- <hexp> # Hexpair to string
@@ -6238,12 +6319,19 @@
       ?l <str>  # String length
       ?a        # ASCII table
 
-      # Visual/Panels view
+      # Visual/Panels view options
+      e dbg.follow=true  # Follow IP on step
+      e dbg.slow=true    # Verbose dumps
+      e dbg.funcarg=true # Show func-call args
+
+      # Visual/Panels view commands
+      .    # Seek to PC or entrypoint
       V    # Visual view (from prompt)
       v    # Panels view (from prompt)
       V    # Graph view (from visual/panels)
       SPC  # Switch to Graph/Panels view
       !    # Switch to Visual/Panels view
+      e    # Replace panel with command
       p/n  # Previous/Next mode
       _    # HUD view
       \    # User-friendly view
@@ -6251,6 +6339,7 @@
       m    # Un/Select menu
       c    # Enable/disable cursor
       b    # Toggle breakpoint at cursor
+      A    # Assemble+insert opcode at cursor
       g    # Seek to offset
       /    # Highlight
       G    # Seek to highlight
