@@ -2531,6 +2531,9 @@
          #+begin_src sh
            java -jar test.jar
          #+end_src
+*** JavaScript
+**** XSS
+     - Check if the XSS is running in the same page context (and not an *iframe*) with ~alert(document.domain)~ instead of ~alert(1)~
 *** XML
 **** Injection
 ***** Notes
