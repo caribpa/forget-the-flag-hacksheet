@@ -2489,6 +2489,48 @@
              }
          }
        #+end_src
+*** Java
+**** Decompilation
+***** fernflower
+     - [[https://github.com/JetBrains/intellij-community/tree/master/plugins/java-decompiler/engine][Site]] - JetBrains Intellij Decompiler
+***** JD-GUI
+     - [[https://java-decompiler.github.io/][Site]] - Multiplatform Decompiler
+**** Deserialization
+***** Java-Deserialization-Cheat-Sheet
+     - [[https://github.com/GrrrDog/Java-Deserialization-Cheat-Sheet][Site]] - Java Deserialization cheatsheet
+***** ysoserial
+     - [[https://github.com/frohoff/ysoserial][Site]] - Java deserialization payload gen
+       #+begin_src sh
+         java -jar ysoserial.jar CommonsCollections1 calc.exe
+       #+end_src
+**** JAR
+     - Create a JAR from scratch:
+       - ~JAR/test.java~
+         #+begin_src java
+           import java.util.*
+
+           public class test{
+               public static void main(String[] args){
+                   System.out.println("<test>");
+               }
+           }
+         #+end_src
+       - Compile:
+         #+begin_src sh
+           javac -source 1.8 -target 1.8 test.java
+         #+end_src
+       - ~META-INF/MANIFEST.MF~
+         #+begin_src text
+           Main-Class: test
+         #+end_src
+       - Create JAR:
+         #+begin_src sh
+           jar cmvf META-INF/MANIFEST.MF test.jar test.class
+         #+end_src
+       - Test it:
+         #+begin_src sh
+           java -jar test.jar
+         #+end_src
 *** XML
 **** Injection
 ***** Notes
