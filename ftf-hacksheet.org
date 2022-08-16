@@ -3230,6 +3230,15 @@
         -- Using a DB object
         SELECT <column> FROM <db>.dbo.<table-name>
       #+end_src
+*** Find the collation of table
+    - Querying the schema:
+      #+begin_src sql
+        SELECT collation_name FROM information_schema.columns WHERE column_name='name' AND table_name='<table-name>'
+      #+end_src
+    - Collate the return value:
+      #+begin_src sql
+        SELECT name COLLATE <collation-name> FROM <table-name>
+      #+end_src
 ** MySQL
 *** Connection
 **** Linux
