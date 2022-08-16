@@ -63,7 +63,7 @@
         # TODO - Modify to use in scripts
         awk '/eth0/&&$3{split($3,a,"");while(i++<8)printf"%d.","0x"a[9-++i]a[10-i];print"\b ";exit}' /proc/net/route
       #+end_src
-** DNS and Hostnames
+** DNS and Hostname
 *** Domain Resolution
 **** Perl
      - Core Perl - IPv4
@@ -1738,8 +1738,14 @@
          [ -z "${OLD_IP+x}" ] && unset IP || { IP="${OLD_IP}"; unset OLD_IP; }
          cd .
 
+         # Multi-hop (accept host-key beforehand)
+         # \e]51;Assh:<hop-user>@<hop-ip>#<port>|ssh:${USER}@'${IP}':%s\e\\
+
          # Tmux escape:  \ePtmux;\e\e]%s\007\e\\
          # Screen escape: \eP\e]%s\007\e\\
+         #
+         # Tmux multi-hop:
+         # \ePtmux;\e\e]51;Assh:<hop-user>@<hop-ip>#<port>|ssh:${USER}@'${IP}':%s\007\e\\
        #+end_src
 **** PLINK.exe
      - Connect to host
