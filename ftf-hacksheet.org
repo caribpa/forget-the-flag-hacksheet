@@ -7523,11 +7523,15 @@
 
       # If RDP8 proto is not available
       # use /rfx /codec-cache:rfx
-      xfreerdp /log-level:FATAL /network:lan /dynamic-resolution -decorations -themes /gfx /codec-cache:gfx +gfx-small-cache +glyph-cache /sound /u:'<DOMAIN>\<user>' /v:127.0.0.1:3389 +auto-reconnect +bitmap-cache +multitransport +window-drag
-      # /mic - Enable the microphone
+      xfreerdp /log-level:FATAL /network:lan /dynamic-resolution -decorations -themes /gfx /codec-cache:gfx +gfx-small-cache +glyph-cache /sound /u:'<DOMAIN>\<user>' /v:<ip-host>:<port> +auto-reconnect +bitmap-cache +multitransport +window-drag
+      # /drive:<name>,<path> - Mount local path
+      # /p:'<pass>           - Optional password
+      # -sec-tls             - No TLS (fix errors)
+      # -sec-nla             - No NLA (fix errors)
+      # /mic                 - Enable microphone
 
       # Scale for HiDPI display
-      xfreerdp /log-level:FATAL /network:lan /scale:180 /scale-desktop:280 /scale-device:180 /dynamic-resolution -decorations -themes /gfx /codec-cache:gfx +gfx-small-cache +glyph-cache /sound /u:'<DOMAIN>\<user>' /v:127.0.0.1:3389 +auto-reconnect +bitmap-cache +multitransport +window-drag
+      xfreerdp /log-level:FATAL /network:lan /scale:180 /scale-desktop:280 /scale-device:180 /dynamic-resolution -decorations -themes /gfx /codec-cache:gfx +gfx-small-cache +glyph-cache /sound /u:'<DOMAIN>\<user>' /v:<ip-host>:<port> +auto-reconnect +bitmap-cache +multitransport +window-drag
       # There are some flags to redirect the
       # local USBs and microphones
     #+end_src
