@@ -2294,6 +2294,8 @@
           expect://nc$IFS10.0.0.1$IFS8080
         #+end_src
 **** File Upload
+***** Extensions
+      - Try ~php3~, ~php4~, ~php5~, and ~phtml~
 ***** PHPINFO - info.php
       - Note that this is a temporary upload
       - First check that ~file_uploads = On~
