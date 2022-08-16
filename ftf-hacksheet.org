@@ -1972,6 +1972,26 @@
 
          QUIT
        #+end_src
+*** Server
+**** Python smtpd
+     - [[https://docs.python.org/3/library/smtpd.html][Docs]] - Builtin Python < 3.12
+       #+begin_src sh
+         # DebuggingServer prints to stdout
+         python3 -m smtpd -n -c DebuggingServer 0.0.0.0:25
+         # -n         - Run as nobody
+         # -c <class> - smtpd handler class/object
+       #+end_src
+**** aiosmtpd
+     - [[https://aiosmtpd.readthedocs.io][Site]] - Builtin Python >= 3.12
+       #+begin_src sh
+         # Prints to stdout as it defaults to:
+         #   -c aiosmtpd.handlers.Debugging
+         python3 -m aiosmtpd -n -l 0.0.0.0:25
+         # -n             - Run as nobody
+         # -l <host:port> - Listen address
+         # -u             - Enable SMTPUTF8 ext
+         # -c <class>     - aiosmtpd handler class
+       #+end_src
 ** POP3
 *** Read Emails
 **** Telnet
