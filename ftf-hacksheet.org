@@ -7920,8 +7920,15 @@
       - Select Compact disk
 ** VirtualBox VM Maintenance
 *** Shrink
-    - Defrag the guest
-    - Write a /wipefile to zero all the data
+    - Defrag the guest:
+      #+begin_src sh
+        # ext4 filesystem
+        e4defrag /
+      #+end_src
+    - Write a /wipefile to zero all the data:
+      #+begin_src sh
+        cat /dev/zero > /wipefile; sync; rm /wipefile; sync
+      #+end_src
     - Power off the guest
     - From the host:
       #+begin_src sh
