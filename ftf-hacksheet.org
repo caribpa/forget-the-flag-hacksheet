@@ -7380,6 +7380,23 @@
    - According to [[https://evabssi.com/evaluation-des-performances-doutils-de-bruteforce-durl/][this]], ~patator~ outperforms all the other high-level parallel tools
      - But the article doesn't say if coroutines have been placed in the same category as threads
      - And it doesn't say if Wfuzz PyCurl is [[https://wfuzz.readthedocs.io/en/latest/user/installation.html#installation-issues][correctly linked]]
+** OWASP ZAP
+*** Allow Weak SSL/TLS Algorithms
+    - Either edit the ~java.security~ file
+    - Or override it: ~/usr/local/bin/zaproxy~
+      #+begin_src sh
+        #!/bin/bash
+
+        JAVA_TOOL_OPTIONS="-Djava.security.properties="<(echo "jdk.tls.disabledAlgorithms=") exec /usr/bin/zaproxy
+      #+end_src
+    - See also the [[https://www.zaproxy.org/faq/how-to-connect-to-an-https-site-that-reports-a-handshake-failure/][ZAP FAQ]]
+*** HiDPI
+    - ~/usr/local/bin/zaproxy~
+      #+begin_src sh
+        #!/bin/sh
+
+        JAVA_TOOL_OPTIONS="-Dsun.java2d.uiScale=3.5" exec /usr/bin/zaproxy
+      #+end_src
 ** MSYS for Windows
 *** Download
     - Using MSYS might be the easiest way to get an unified linux-like environment in Windows
