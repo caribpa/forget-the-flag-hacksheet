@@ -7918,7 +7918,7 @@
       - Select the Hard Drive of the client in the VMplayer dashboard > VM Settings
       - Select Defrag disk (doesn't seem to work)
       - Select Compact disk
-** VirtualBox VM Maintenance
+** VirtualBox VM
 *** Shrink
     - Defrag the guest:
       #+begin_src sh
@@ -7941,6 +7941,13 @@
         # Auto-compact all disks
         VBoxManage list hdds 2>&1 | awk '/^UUID/{print $2}' | xargs -i VBoxManage modifymedium disk "{}" --compact
       #+end_src
+*** Internal Network
+    - Used to connect different VMs:
+      #+begin_src sh
+        VBoxManage dhcpserver add --netname intlab --ip 10.10.10.1 --netmask 255.255.255.0 --lowerip 10.10.10.2 --upperip 10.10.10.210 --enable
+      #+end_src
+    - Create a new /Internal Network/ adapter and write the name (if not listed): ~intlab~
+    - It might be needed to start the VMs in graphical mode to be able to manually connect to multiple ethernet adapters
 ** Pip Cache
    - Purge ~pip~ cache and don't use it anymore
      #+begin_src sh
