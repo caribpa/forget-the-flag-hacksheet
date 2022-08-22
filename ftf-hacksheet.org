@@ -4037,6 +4037,54 @@
     #+begin_src sql
         SELECT Id, (SELECT Name FROM other_table) FROM table
     #+end_src
+** HyperSQL - HSQLDB
+*** Java Client - Database Manager GUI
+    - Get the [[https://www.hsqldb.org/download/][JAR client]] and connect:
+      #+begin_src sh
+        java -cp hsqldb-<ver>.jar org.hsqldb.util.DatabaseManagerSwing --url jdbc:hsqldb:hsql://<ip>/<path> --user <user> --password <pass>
+        # Default user: sa - no password
+      #+end_src
+*** Java Language Routines - JRT
+**** Check
+    - Check that functions can be created & run:
+      #+begin_src sql
+        CREATE FUNCTION getProperty(IN key VARCHAR) RETURNS VARCHAR
+        LANGUAGE JAVA
+        DETERMINISTIC NO SQL
+        EXTERNAL NAME 'CLASSPATH:java.lang.System.getProperty'
+
+        -- Check the classpath of HSQLDB:
+        VALUES(getProperty('java.class.path'))
+      #+end_src
+    - In the application or the JRE, search for:
+      - ~public static~ methods
+      - with parameters that map to SQL types or primitives (String, Int...)
+      - and its return value maps to an SQL type, primitives or ~void~
+    - Extract/find all the java classes and use an IDE to import them as a project to ease the search
+**** Read/Write File
+    - Read using [[https://santuario.apache.org/Java/api/org/apache/xml/security/utils/JavaUtils.html#getBytesFromFile-java.lang.String-][JavaUtils getBytesFromFile]]:
+      #+begin_src sql
+        CREATE PROCEDURE getBytesFromFile(IN paramString VARCHAR)
+        LANGUAGE JAVA
+        DETERMINISTIC NO SQL
+        EXTERNAL NAME 'CLASSPATH:com.sun.org.apache.xml.internal.security.utils.JavaUtils.getBytesFromFile'
+
+        -- Read from file - Accepts relative path
+        VALUES(getBytesFromFile('<file>'))
+        -- Returns content hex encoded
+      #+end_src
+    - Write using [[https://santuario.apache.org/Java/api/org/apache/xml/security/utils/JavaUtils.html#writeBytesToFilename-java.lang.String-byte:A-][JavaUtils writeBytesToFilename]]:
+      #+begin_src sql
+        -- VARBINARY size could be bigger
+        CREATE PROCEDURE writeBytesToFilename(IN paramString VARCHAR, IN paramArrayOfByte VARBINARY(1024))
+        LANGUAGE JAVA
+        DETERMINISTIC NO SQL
+        EXTERNAL NAME 'CLASSPATH:com.sun.org.apache.xml.internal.security.utils.JavaUtils.writeBytesToFilename'
+
+        -- Write to file - <hex> has no 0x prefix
+        CALL writeBytesToFilename('<file>', CAST ('<hex>' AS VARBINARY(1024)))
+        -- CALL required for void returning funcs
+      #+end_src
 
 * Encryption
 ** Notes
