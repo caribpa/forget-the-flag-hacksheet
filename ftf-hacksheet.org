@@ -8282,6 +8282,77 @@
        #+begin_src sh
          pdftk <file2.pdf> update_info <meta-file2> output <updated.pdf>
        #+end_src
+*** OCR Text Layer
+**** OCRmyPDF
+     - [[https://github.com/ocrmypdf/OCRmyPDF][Site]] - Make PDF searchable with text layer
+       #+begin_src sh
+         # Uses Tesseract OCR engine
+         ocrmypdf <input.pdf> <output.pdf>
+         # -l <lang1+lang2>  - Add languages
+         # --jobs <n>        - Cores to use
+         # --rotate-pages    - Fix misrotation
+         # --deskew          - Fix crooked PDFs
+         # --output-type <t> - PDF/A by default
+         # --title "<title>" - Add a title
+       #+end_src
+** OCR
+*** Tesseract
+    - [[https://github.com/tesseract-ocr/tesseract/][Site]] - State-of-the-art OCR engine:
+      #+begin_src sh
+        # Using the new LSTM engine (ver >= 4)
+        tesseract --oem 1 -l eng <file.img> stdout
+        # --oem <mode>       - OCR Engine Mode
+        # -l <lang>          - Required
+        # --list-langs
+      #+end_src
+    - To OCR PDFs use ~OCRmyPDF~ with ~pdftotext~
+    - Or use ~pdftoppm~ to convert them to PPM/PNG:
+      #+begin_src sh
+        # Tesseract can read PNM files
+        pdftoppm <file.pdf> file
+        # Creates to one PPM file per page
+        # -mono             - Generates PBM
+        # -png              - Generates PNG
+        # -hide-annotations - If breaks tesseract
+      #+end_src
+    - Or use GhostScript to convert them to PNG:
+      #+begin_src sh
+        gs -sDEVICE=pngalpha -r300 -dNOPAUSE -dBATCH -q -o file-%03d.png <file.pdf>
+        # Preserve color with
+        # -sDEVICE=png16m -dTextAlphaBits=4
+      #+end_src
+*** Ocrad
+    - [[https://www.gnu.org/software/ocrad/][Site]] - [[https://ftp.gnu.org/gnu/ocrad/][Download]] - Non-lang dependant OCR:
+      #+begin_src sh
+        # Only png, pbm, pgm, and ppm - See below
+        ocrad -c ascii -F utf8 <file.img> [...]
+        # -c <file-charset>  - List all with help
+        # -F <output-format> - List all with help
+        # -l                 - Whitespace split
+        # -i                 - Invert img filter
+        # -s [-]<num-scale>  - Scale img filter
+        # -T <num-threshold> - Useful for scale
+        # -u <l,t,w,h>       - Analyze region
+        # -t <transform>     - Rotate/Mirror/etc
+        # -E <file.filter>   - See Filters man
+        #    Use it to only output specific
+        #    characters or replace others
+        # -e <filter>        - Hint content
+        #    numbers -> Recognize hex accurately
+        #    text_only
+        #    upper_num
+        #    same_height -> Only averg size text
+        #    text_block  -> Recognize tables etc
+        # Multiple filters can be chained
+      #+end_src
+    - Analyze JPEG and PDFs with helper tools:
+      #+begin_src sh
+        # OCR a JPEG with djpeg
+        djpeg -greyscale -pnm <file.jpg> | ocrad
+
+        # OCR a PDF with GhostScript
+        gs -sPAPERSIZE=a4 -sDEVICE=pnmraw -r300 -dNOPAUSE -dBATCH -sOutputFile=- -q <file.pdf> | ocrad
+      #+end_src
 
 * Compilers
 ** Python
