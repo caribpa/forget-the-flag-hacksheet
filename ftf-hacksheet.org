@@ -6447,6 +6447,7 @@
      - CUDA + OpenCL CPU
        #+begin_src sh
          # Use -a 1 with multiple dicts
+         # Use -S to optimize small dictionaries
          # Use -r <rule> to apply rules
          # Other attacks in hashcat -h end
          vblank_mode=0 nice -10 optirun --no-xorg -b none -- pvkrun hashcat -D1,2 -d1,4 -a 0 -m <hash-id> -O -w 4 <hash-file> <wordlist>
