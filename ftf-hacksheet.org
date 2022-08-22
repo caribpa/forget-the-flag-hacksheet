@@ -523,6 +523,10 @@
          # sed+sort variant - order not preserved
          sed 's/\.\?%EXT%\.\?//' *.txt | sort -u > all.txt
        #+end_src
+     - Remove duplicates from previous dicts:
+       #+begin_src sh
+         echo "-<ndict>-" | awk '!x[$0]++&&p;!p{p=/-<ndict>-/}' <odict> - <ndict> > <cndict>
+       #+end_src
      - Followed by some Web App/Server specific (Windows/Linux, IIS/Apache...) + [[https://gitlab.com/kalilinux/packages/dirb/-/tree/kali/master/wordlists][dirb ones]]
        - Apache:
          - [[https://github.com/danielmiessler/SecLists/raw/master/Discovery/Web-Content/Apache.fuzz.txt][Apache.fuzz.txt]]
