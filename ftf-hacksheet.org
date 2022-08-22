@@ -1639,8 +1639,9 @@
 **** FTP
      - Connect:
        #+begin_src sh
+         # Use 'anonymous' or 'ftp' as name for anon user
          ftp <ip>
-         # Use anonymous as name to anon user
+         # -P <port>
        #+end_src
      - Commands:
        #+begin_src sh
