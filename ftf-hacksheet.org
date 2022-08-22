@@ -2237,6 +2237,10 @@
      - Note that any other script in the ~/cgi-bin/~ folder may also be susceptible to shellshock
      - Scripts there may even set a ~text/x-sh~ header (or broken ones), so add an ~echo;~ before the test command
 *** PHP
+**** Dictionaries
+     - [[https://github.com/danielmiessler/SecLists/raw/master/Discovery/Web-Content/Common-PHP-Filenames.txt][Common-PHP-Filenames.txt]]
+     - [[https://github.com/danielmiessler/SecLists/raw/master/Discovery/Web-Content/CommonBackdoors-PHP.fuzz.txt][CommonBackdoors-PHP.fuzz.txt]]
+     - [[https://github.com/danielmiessler/SecLists/raw/master/Discovery/Web-Content/PHP.fuzz.txt][PHP.fuzz.txt]]
 **** Login Bypass
 ***** Array
       - Array types may break the form validation logic
