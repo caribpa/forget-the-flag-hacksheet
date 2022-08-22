@@ -1145,10 +1145,13 @@
          # -n <port>  -> Use port number
          # -a <ip:port> -T tcp/udp - Alt
 
+         # Query service (cannot use -s)
+         rpcinfo [-t|-u] <ip/host> <serv-num>
+
          # Uses rpcbind version 2
          rpcinfo -p <ip/host>
 
-         # Query service
+         # Query service - version 2
          rpcinfo -p <ip/host> <serv-num>
          # -T tcp/udp -> Force transport
          # -l         -> List all entries
