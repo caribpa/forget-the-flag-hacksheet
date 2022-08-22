@@ -4496,13 +4496,15 @@
      #+end_src
    - Permissions identification:
      #+begin_src sh
-       # Check if sudo may be vulnerable
+       # Check if sudo is vulnerable in exploitdb
        sudo -V
 
        # Commands that can be run with sudo
        # without password prompting
        sudo -l
        # Also note: env_keep+=LD_PRELOAD
+       # Exploit dirs with wildcards: /vuln/dir/*
+       # sudo /bin/sh /vuln/dir/../../tmp/root.sh
 
        # Same but for all users
        less /etc/sudoers
