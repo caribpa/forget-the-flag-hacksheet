@@ -1670,16 +1670,17 @@
           # -b          - Hide banner
           # -t <num>    - Thread number
           # -T <num>    - Concurrent hosts
+          # -L          - Spray 1 user/thread
           # -M <module> - Choose module
           # -m <param>  - Module parameter
+          # -[dq]       - Show modules/params
           # -s          - Use SSL
           # -n <port>   - Different port
           # -Z <key>    - Resume using key
           # -e [ns] - Try Null/Same usr->pwd
           # -[up] <single-usr/pass>
           # -[Ff] - 1 valid combo Any/1 host
-          # -H <host-list> | -C <combo-list>
-          # -d - * Modules | -q - All params
+          # -H <host-list>  | -C <combo-list>
         #+end_src
 ***** Ffuf
       - Adapt [[https://raw.githubusercontent.com/ffuf/ffuf-scripts/master/ffuf_basicauth.sh][ffuf_basicauth]] from [[https://github.com/ffuf/ffuf-scripts][ffuf-scripts]]:
