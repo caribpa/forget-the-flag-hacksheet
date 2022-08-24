@@ -2144,7 +2144,7 @@
          # Best tool if system.multicall works
 
          # First check if system.multicall works
-         curl -d @<(awk -vMULTI=1000 -vUSER='<user>' -vORS='' -vbegin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>' -vend='</data></array></value></param></params></methodCall>\n' 'BEGIN{print begin;++MULTI};!(NR%MULTI){print end begin}$0="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value><array><data><value><string>"USER"</string></va→
+         curl -d @<(awk -vMULTI=1000 -vUSER='<user>' -vORS='' -vbegin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>' -vend='</data></array></value></param></params></methodCall>\n' 'BEGIN{print begin;++MULTI};!(NR%MULTI){print end begin}$0="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value><array><data><value><string>"USER"</string></value><value><string>"$0"</string></value></data></array></value></data></array></value></member></struct></value>";END{print end}' <dict> | head -n 1) -H 'Content-Type: text/xml' <url>/xmlrpc.php
          # If so, find the max MULTI allowed
 
          # Patator - 650 req 3 threads - 5 req/s
@@ -3261,7 +3261,7 @@
       - Multi-attempts in one request:
         #+begin_src sh
           # First check if system.multicall works
-          curl -d @<(awk -vMULTI=1000 -vUSER='<user>' -vORS='' -vbegin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>' -vend='</data></array></value></param></params></methodCall>\n' 'BEGIN{print begin;++MULTI};!(NR%MULTI){print end begin}$0="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value><array><data><value><string>"USER"</string></v→
+          curl -d @<(awk -vMULTI=1000 -vUSER='<user>' -vORS='' -vbegin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>' -vend='</data></array></value></param></params></methodCall>\n' 'BEGIN{print begin;++MULTI};!(NR%MULTI){print end begin}$0="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value><array><data><value><string>"USER"</string></value><value><string>"$0"</string></value></data></array></value></data></array></value></member></struct></value>";END{print end}' <dict> | head -n 1) -H 'Content-Type: text/xml' <url>/xmlrpc.php
           # If so, find the max MULTI allowed
 
           # Patator - 650 req 3 threads - 5 req/s
@@ -3273,7 +3273,7 @@
           #!/usr/bin/env -S perl -pl
 
           # Set $maxsize to patator multi maxsize
-          BEGIN{$multi=650;$user='<user>';my$maxsize=10000;use Fcntl;fcntl+STDOUT,Fcntl->F_SETPIPE_SZ,$maxsize;undef$\;print$begin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>';$end='</data></array></value></param></params></methodCall>\n';++$multi};print$end,$begin,unless$.%$multi;$_="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value>→
+          BEGIN{$multi=650;$user='<user>';my$maxsize=10000;use Fcntl;fcntl+STDOUT,Fcntl->F_SETPIPE_SZ,$maxsize;undef$\;print$begin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>';$end='</data></array></value></param></params></methodCall>\n';++$multi};print$end,$begin,unless$.%$multi;$_="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value><array><data><value><string>$user</string></value><value><string>$_</string></value></data></array></value></data></array></value></member></struct></value>";END{print$end}
           # Setting the pipe with fcntl is an
           # alternative to setting it on
           # patator's pipesize subprocess.Popen
