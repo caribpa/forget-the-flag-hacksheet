@@ -751,6 +751,84 @@
        #+end_src
      - [[https://wfuzz.readthedocs.io/en/latest/user/wfpayload.html][wfpayload]] *TODO*
      - Apparently [[https://www.doria.fi/handle/10024/181265][still better than ffuf]]
+*** Screenshot
+**** gowitness
+     - [[https://github.com/sensepost/gowitness][Site]] - [[https://github.com/sensepost/gowitness/releases][Bin]] - Multi-URL screenshot+collage:
+       #+begin_src sh
+         # Screenshot multi-URLs + populate DB
+         gowitness file -f <urls.txt>
+         # -F                  - Fullpage capture
+         # --header "<header>" - Chainable
+         # --user-agent "<UA>"
+         # -t <threads>
+         # -d <secs>           - Screenshot delay
+         # -p <proxy>
+         # --no-http[s]        - If no URL schema
+
+         # Screenshot single URL
+         gowitness single --disable-db -o <file> <url>
+         # --pdf     - Save screenshot as PDF
+         # -P <dir>  - Screenshot directory path
+         # -X <width>
+         # -Y <height>
+         # --disable-logging
+
+         # Show a simplified database status
+         gowitness report list
+
+         # Start complete report server
+         gowitness server -a <ip:port>
+         # -A       - Allow non HTTP(S) URIs
+
+         # Save visual report site as standalone
+         gowitness report export -f <archive.zip>
+       #+end_src
+**** capture-website-cli
+     - [[https://github.com/sindresorhus/capture-website-cli][Site]] - Flexible Puppeteer web capture cli:
+       #+begin_src sh
+         capture-website --output=web.png <url/file>
+         # --header="<header>"  - Can be chained
+         # --cookie="<cookie>"  - Can be chained
+         # --user-agent="<UA>"
+         # --authentication="<http-auth>"
+         #
+         # --emulate-device="<device>"
+         # --list-devices
+         #
+         # --timeout=<secs>
+         # --delay=<secs>
+         #
+         # --scale-factor=<n>
+         # --module=<js/file> - Inject JavaScript
+         # --script=<js/file> - Inject JS: script
+         #
+         # --no-javascript
+         # --no-block-ads
+         # --no-default-background
+         # --disable-animations
+         #
+         # --dark-mode
+         # --style=<CSS/file> - Inject CSS style
+         #
+         # --element=<CSS-selector> - Capture DOM
+         # --click-element=<CSS-selector>
+         # --wait-for-element=<CSS-selector>
+         # --scroll-to-element=<CSS-selector>
+         # --hide-elements=<CSS-selector> - Chain
+         # --remove-elements=<CSS-selector> - ^
+         #
+         # --launch-options="<puppeteer-json>"
+
+         # Auto-crop full-page with --height=1
+         capture-website --height=1 --full-page --overwrite --output=web.png <url/file>
+         # 'Unable to capture screenshot' means
+         # that the height is above 10000000px
+         # This is a Chrome limitation
+
+         # Use --inset to workaround the issue
+         capture-website --height=30000 --inset=20000,0,0,0 --overwrite <url>
+         # ^ 10000 pixels from 20000y-px
+       #+end_src
 *** Tampering
 **** Wuzz
      - [[https://github.com/asciimoo/wuzz][Site]] - HTTP Client - [[https://github.com/asciimoo/wuzz/blob/66176b6ef86c4879975d4075d784135d56ee3e82/wuzz.go#L1553][hidden flags]]:
