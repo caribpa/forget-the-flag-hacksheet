@@ -330,6 +330,19 @@
          sudo -v; seq 100 100 65535 | while read ports; do sudo nmap -sS -n -sV -Pn --open --reason -T4 --min-rate=5000 -p$((ports - 100))-$ports -oG tun-100-tcp.gnmap -e tun10 <ip> 2>&1; cat tun-100-tcp.gnmap >> tun-all-tcp.gnmap; sleep 2; done | stdbuf -i0 -o0 awk '/open/ && !/tcpwrapped/' | tee out.nmap
          # chisel was used as SOCKS mechanism
        #+end_src
+**** Smap
+     - [[https://github.com/s0md3v/Smap][Site]] - [[https://github.com/s0md3v/Smap/releases][Binary]] - shodan.io powered nmap:
+       #+begin_src sh
+         # Passive, fast + a few false negatives
+         smap <target1> [<target2> ...]
+         # -oS - - Custom smap out format
+         # -iL <ifile> - List of targets to scan
+         # The -p only allows comma-sep ports:
+         #   -p $(seq -s, 0 15536)
+         # Other nmap options are ignored
+         # IPv6 not supported
+       #+end_src
+     - List of [[https://github.com/s0md3v/Smap/blob/master/internal/output/xml.go#L13][shodan ports]]
 **** Masscan
      - Install the [[https://www.ntop.org/guides/pf_ring/zc.html#supported-cards][Zero Copy driver]] if your card supports it and check for it:
        #+begin_src sh
