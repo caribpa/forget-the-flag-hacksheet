@@ -411,11 +411,12 @@
          # Crawl dom+subdomains indefinetely
          gospider -s <url> -d 0 --sitemap -w
          # --json - JSON output
+         # -r     - Also find from Archive.org
        #+end_src
      - Non-duplicated sites clean output - proxy
        #+begin_src sh
          gospider -s <url> -p http://<proxy:p> -d 0 --sitemap -w | awk '!x[$NF]++{print $NF}'
-         # Filter -> Prepend /<site>/&& to awk
+         # Filter-> Prepend /<site>/~$NF&& to awk
        #+end_src
      - Or with json + cookies - no subdomains:
        #+begin_src sh
@@ -727,6 +728,7 @@
          # -> Filters may glitch the terminal
          wfuzz -w <wlist> -Z -c '<url>/FUZZ'
          # -Z - Ignore errors | -c - colors
+         # -H <header>
          # --hh <n> - Filter by size
          # --hl <n> - Filter by lines
          # --hw <n> - Filter by words
